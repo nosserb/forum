@@ -1,0 +1,63 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"time"
+
+	db "forum/model/functions" // 🔁 Remplace par le chemin correct vers ton package db
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+func main() {
+	// Connexion à SQLite en mémoire
+	dbConn, err := sql.Open("sqlite3", "./model/forum.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dbConn.Close()
+
+	// Création des tables
+	db.Initialisation(dbConn)
+	// 🔹 Insertion 1 : directe
+	_, err = db.InsertUser(dbConn, "direct@example.com", "directuser", "pass123")
+	if err != nil {
+		log.Fatalf("Erreur InsertUser directe: %v", err)
+	}
+
+	// 🔹 Insertion 2 : via goroutine
+	insertChan := make(chan db.InsertRequest)
+	db.InsertWorker(dbConn, insertChan)
+
+	user := db.User{
+		Email:     "gogo@example.com",
+		Username:  "gogoroutine",
+		Password:  "pass456",
+		CreatedAt: time.Now(),
+	}
+
+	respChan := make(chan int)
+	insertChan <- db.InsertRequest{
+		Type:     db.InsertUserType,
+		Data:     user,
+		RespChan: respChan,
+	}
+
+	if <-respChan != 1 {
+		log.Fatal("Échec insertion via goroutine")
+	}
+
+	// 🔹 Fetch all users et print
+	users, err := db.FetchUsers(dbConn)
+	if err != nil {
+		log.Fatalf("Erreur FetchUsers: %v", err)
+	}
+
+	fmt.Println("👥 Utilisateurs en base :")
+	fmt.Println(users)
+
+	// Nettoyage
+	close(insertChan)
+}

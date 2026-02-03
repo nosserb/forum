@@ -1,0 +1,28 @@
+package main
+
+import (
+	"database/sql"
+	forum "forum/functions"
+	"log"
+
+	_ "github.com/mattn/go-sqlite3"
+)
+
+func main() {
+	db, err := sql.Open("sqlite3", "./forum.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	forum.Initialisation(db)
+	/*usersTab, err := forum.FetchUsers(db)
+	if err != nil {
+		fmt.Println("Erreur lors de la récupération des utilisateurs :", err)
+		return
+	}
+	for _, user := range usersTab {
+		fmt.Println(user)
+	}*/
+
+}

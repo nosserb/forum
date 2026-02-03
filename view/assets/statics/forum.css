@@ -1,0 +1,272 @@
+:root {
+  --site-bg: #0f2b46;
+  --card-bg: #1b3049;
+  --card-border: rgba(255,255,255,0.03);
+  --accent: #2fa84a;
+  --accent-strong: #2fbe4f;
+  --dislike-color: #ff4d4f;
+  --text: #ffffff;
+  --muted: #9ca3af;
+  --input-bg: #eef6ff;
+  --input-border: #cbd5e1;
+  --input-color: #0b1220;
+  --link: #3b82f6;
+  --counter-color: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background-color: var(--site-bg);
+  background-image:
+    radial-gradient(700px 500px at 18% 78%, rgba(110,140,210,0.60), transparent 28%),
+    radial-gradient(900px 520px at 82% 12%, rgba(60,100,170,0.50), transparent 32%),
+    linear-gradient(180deg, rgba(8,28,50,0.12), rgba(5,15,30,0.18));
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.forum-header {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 14px 20px;
+  backdrop-filter: blur(4px);
+}
+
+.forum-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.brand h2 { margin: 0; font-size: 18px; font-weight: 700; }
+
+.muted-small { color: var(--muted); font-size: 13px; }
+
+.auth-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.inline-form { display: inline; }
+
+.button {
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.02);
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease, border 0.15s ease;
+}
+
+.button:hover {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--text);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.forum-main {
+  max-width: 1100px;
+  margin: 20px auto 20px auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 20px;
+}
+
+.sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+.small-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 12px 40px rgba(3,6,12,0.35);
+  color: var(--text);
+}
+
+.filter-label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  appearance: none;
+}
+
+#filters-form div { margin-top: 16px; display: flex; gap: 8px; }
+
+.feed { display: flex; flex-direction: column; gap: 16px; }
+
+.card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px; box-shadow: 0 12px 40px rgba(3,6,12,0.35); color: var(--text); }
+
+.new-post label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.new-post input, .new-post textarea { width: 100%; margin-top: 8px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--input-color); font-size: 14px; }
+
+/* Category button styles (used in new-post form) */
+.categories-row { flex-wrap: wrap; }
+.categories-row label.cat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 6px 14px rgba(3,6,12,0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease, filter 0.12s ease;
+}
+.categories-row label.cat-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(3,6,12,0.35);
+  filter: brightness(1.03);
+}
+.categories-row label.cat-btn input[type="checkbox"] { display: none; }
+
+/* Active state (when selected) */
+.categories-row label.cat-btn.active {
+  background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(245,255,240,0.95));
+  color: #0b1220;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 14px 30px rgba(47,184,79,0.14), 0 4px 8px rgba(3,6,12,0.18) inset;
+}
+.categories-row label.cat-btn.active::after {
+  content: "";
+  display: inline-block;
+  margin-left: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(47,184,79,0.85);
+}
+
+/* make the category badges on posts consistent */
+.post-cats .category {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+/* compact badge used at top-right of posts */
+.cat-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 8px 20px rgba(3,6,12,0.20);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.cat-badge:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(3,6,12,0.28); }
+.post-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.post-top .post-meta { margin:0; }
+
+.post-meta { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.post h4 { margin: 0 0 8px 0; font-size: 16px; color: var(--text); }
+.post p { margin: 0 0 10px 0; color: var(--text); line-height: 1.4; }
+
+.card.post a, .card.post a * { text-decoration: none !important; color: inherit !important; cursor: pointer; }
+
+.post-link { display: block; width: 100%; height: auto; }
+
+.card.post { transition: background 0.15s ease; }
+.card.post:hover { background: rgba(255,255,255,0.05); }
+
+textarea { resize: none !important; min-height: 96px; max-height: 360px; line-height: 1.45; box-sizing: border-box; }
+.new-post textarea, .new-reply textarea { width: 100%; height: 140px !important; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--input-color); resize: none !important; }
+
+.post-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+
+.post-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  color: var(--counter-color);
+  font-size: 18px;
+}
+
+.post-actions button img { width: 32px; height: 32px; vertical-align: middle; }
+
+.disabled-like, .disabled-dislike { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+
+/* Make sure images shown for non-logged users are the same size as buttons */
+.disabled-like img, .disabled-dislike img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.like-btn.active img { filter: brightness(1.3) drop-shadow(0 0 2px var(--accent)); }
+.dislike-btn.active img { filter: brightness(1.3) drop-shadow(0 0 2px red); }
+
+/* Counter styling inside buttons */
+.post-actions .count {
+  display: inline-block;
+  min-width: 20px;
+  text-align: left;
+  color: var(--counter-color);
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+
+/* Hover: change color to green for like, red for dislike */
+.like-btn:hover .count { color: var(--accent); transform: translateY(-1px); }
+.dislike-btn:hover .count { color: var(--dislike-color); transform: translateY(-1px); }
+
+/* Active state (server can add `active` class when user liked/disliked) */
+.like-btn.active .count { color: var(--accent); font-weight: 700; }
+.dislike-btn.active .count { color: var(--dislike-color); font-weight: 700; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .forum-main { grid-template-columns: 1fr; padding: 12px; }
+  .sidebar { order: 2; }
+  .feed { order: 1; }
+}
+@media (max-width: 720px) { .container { padding-top: 6vh; } }

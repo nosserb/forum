@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forum Sign Up</title>
+  <link rel="stylesheet" href="/statics/style.css">
+  <link rel="icon" href="/statics/favicon.ico?v=2">
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+
+      <div class="header">
+        <div class="tabs" role="tablist" aria-label="Auth tabs">
+          <a href="/login" class="button">Log in</a>
+          <button class="button active" type="button" disabled>Sign up</button>
+        </div>
+      </div>
+
+      <div class="description">
+        <h1>Welcome to the forum</h1>
+        <p>Create an account to participate.</p>
+      </div>
+
+      <form id="signup" class="form" method="POST" action="/signup">
+        <label>Email
+          <input type="email" name="email" required>
+        </label>
+        <label>Username
+          <input type="text" name="username" required>
+        </label>
+        <label>Password
+          <input type="password" name="password" required minlength="8">
+        </label>
+        <button type="submit" class="button primary">Sign up</button>
+      </form>
+
+      <div class="back-link">
+        <a href="/">← Back to forum</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

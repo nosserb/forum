@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forum</title>
+  <link rel="stylesheet" href="/statics/forum.css" />
+  <link rel="icon" href="/statics/favicon.ico?v=2">
+</head>
+<body>
+  <header class="forum-header">
+    <div class="forum-header-inner container">
+      <div class="brand">
+        <h2>Forum</h2>
+        <p class="muted-small">
+          {{ if .Username }}
+            Welcome, {{ .Username }}
+          {{ else }}
+            Welcome, guest
+          {{ end }}
+        </p>
+      </div>
+
+      <div class="auth-actions">
+        {{ if .Username }}
+          <form method="POST" action="/logout" class="inline-form">
+            <button type="submit" class="button" aria-label="Logout">Logout</button>
+          </form>
+        {{ else }}
+          <a href="/login" class="button" aria-label="Login">Log in</a>
+          <a href="/signup" class="button" aria-label="Signup">Sign up</a>
+        {{ end }}
+      </div>
+    </div>
+  </header>
+
+  <main class="container forum-main">
+    <aside class="sidebar">
+      <section class="card small-card">
+        <h3>Filters</h3>
+
+        <form id="filters-form" method="GET" action="/filter">
+
+          <label class="filter-label" for="categories">Categories</label>
+          <select id="categories" name="Categories" class="filter-select">
+            <option value="none">— No filter —</option>
+            {{ range .Categories }}
+              <option value="{{ .ID }}">{{ .Name }}</option>
+            {{ end }}
+          </select>
+
+
+          <label class="filter-label" for="created">Created</label>
+          <input type="checkbox" id="created" name="created">
+
+          <label class="filter-label" for="liked">Liked</label>
+          <input type="checkbox" id="liked" name="liked">
+
+          <div style="margin-top:8px;">
+            <button type="submit" class="button" aria-label="Apply filters">Apply</button>
+            <button type="button" class="button" id="clear-filters" onclick="window.location.href='/'">Clear</button>
+          </div>
+        </form>
+      </section>
+    </aside>
+
+    <section class="feed">
+      {{/* Only show creation form to connected users */}}
+      {{ if .Username }}
+      <div class="card new-post">
+        <form id="new-post-form" method="POST" action="/post">
+          <label>Create a new topic
+            <input type="text" name="title" placeholder="Topic title" required />
+          </label>
+          <label>Content
+            <textarea name="content" rows="6" placeholder="Write something..." required></textarea>
+          </label>
+          <div class="categories-row" style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+            {{ range .Categories }}
+              <label class="cat-btn"><input type="checkbox" name="category" value="{{ .ID }}"> {{ .Name }}</label>
+            {{ end }}
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="submit" class="button">Post</button>
+            <button type="button" class="button" onclick="document.getElementById('new-post-form').reset()">Cancel</button>
+          </div>
+        </form>
+      </div>
+      {{ else }}
+      <div class="card small-card">
+        <p class="small muted-small">You must <a href="/login">log in</a> to create a topic.</p>
+      </div>
+      {{ end }}
+
+      {{ range .ToDisplay.Posts }}
+      <article class="card post" data-id="{{ .ID }}">
+        <div class="post-top">
+          <div class="post-meta">
+            <strong>{{ .AuthorID }}</strong> · <span class="muted-small">{{ .CreatedAt.Format "2006-01-02 15:04" }}</span>
+          </div>
+          {{ with index $.PostCategories .ID }}
+            <div class="post-cats" style="margin-left:12px;">
+              {{ range . }}<span class="cat-badge">{{ . }}</span>{{ end }}
+            </div>
+          {{ end }}
+        </div>
+        <a class="post-link" href="/post?id={{ .ID }}" aria-label="Open post {{ .Title }}">
+          <h4>{{ .Title }}</h4>
+          <p>{{ .Content }}</p>
+        </a>
+
+        <div class="post-actions">
+          {{ if $.Username }}
+          <form method="POST" action="/like" style="display:inline;">
+            <input type="hidden" name="post_id" value="{{ .ID }}">
+            <button type="submit" class="like-btn">
+              <img src="/statics/image/like.png" alt="Like" />
+              <span class="count">{{ .Likes }}</span>
+            </button>
+          </form>
+
+          <form method="POST" action="/dislike" style="display:inline;">
+            <input type="hidden" name="post_id" value="{{ .ID }}">
+            <button type="submit" class="dislike-btn">
+              <img src="/statics/image/dislike.png" alt="Dislike" />
+              <span class="count">{{ .Dislikes }}</span>
+            </button>
+          </form>
+          {{ else }}
+          <span class="disabled-like"><img src="/statics/image/like.png" alt="Like" /> <span class="count">{{ .Likes }}</span></span>
+          <span class="disabled-dislike"><img src="/statics/image/dislike.png" alt="Dislike" /> <span class="count">{{ .Dislikes }}</span></span>
+          {{ end }}
+        </div>
+      </article>
+      {{ else }}
+      <p class="small">No posts yet.</p>
+      {{ end }}
+    </section>
+  </main>
+  <script src="/statics/js/likecolor.js"></script>
+  <script src="/statics/js/categorie.js"></script>
+</body>
+</html>

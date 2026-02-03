@@ -1,0 +1,201 @@
+:root {
+  --site-bg: #0f2b46;
+  --card-bg: #1b3049;
+  --card-border: rgba(255,255,255,0.03);
+  --accent: #2fa84a;
+  --accent-strong: #2fbe4f;
+  --text: #ffffff;
+  --muted: #9ca3af;
+  --input-bg: #eef6ff;
+  --input-border: #cbd5e1;
+  --input-color: #0b1220;
+  --link: #3b82f6;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background-color: var(--site-bg);
+  background-image:
+    radial-gradient(700px 500px at 18% 78%, rgba(110,140,210,0.60), transparent 28%),
+    radial-gradient(900px 520px at 82% 12%, rgba(60,100,170,0.50), transparent 32%),
+    linear-gradient(180deg, rgba(8,28,50,0.12), rgba(5,15,30,0.18));
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: var(--text);
+}
+
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  width: 100%;
+  background: var(--card-bg);
+  align-self: center;
+  position: absolute;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(3,6,12,0.6);
+  padding: 18px 0 28px 0;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 16px;
+}
+
+.button {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.02);
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease, border 0.15s ease;
+}
+
+.button:hover {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--text);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.button.active {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(47,168,74,0.12);
+}
+.button.active:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.description {
+  text-align: center;
+  margin: 8px 20px 18px;
+}
+
+.description h1 {
+  margin: 6px 0 8px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.description p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 20px 18px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+input {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-color);
+}
+
+input::placeholder {
+  color: rgba(11,18,32,0.45);
+}
+
+button.primary {
+  padding: 14px 18px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  width: 100%;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+button.primary:hover {
+  transform: scale(1.02);
+  filter: brightness(1.1);
+}
+
+.back-link {
+  text-align: center;
+  margin-top: 12px;
+}
+.back-link a {
+  display: inline-block;
+  width: auto;
+  text-decoration: none;
+  text-align: center;
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.02);
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease;
+}
+.back-link a:hover {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--text);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .card { max-width: 90%; }
+  .description h1 { font-size: 20px; }
+  .tabs .button { font-size: 14px; padding: 8px 12px; }
+}
+
+@media (max-width: 720px) {
+  .card {
+    position: static;
+    transform: none;
+    left: auto;
+    top: auto;
+    margin-top: 0;
+  }
+  .container { padding-top: 6vh; }
+}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ .Post.Title }} — Forum</title>
+  <link rel="stylesheet" href="/statics/post.css" />
+  <link rel="icon" href="/statics/favicon.ico?v=2">
+</head>
+<body>
+  <header class="forum-header">
+    <div class="forum-header-inner container">
+      <div class="brand">
+        <h2>Forum</h2>
+        <p class="muted-small">
+          {{ if .Username }}
+            Welcome, {{ .Username }}
+          {{ else }}
+            Welcome, guest
+          {{ end }}
+        </p>
+      </div>
+
+      <div class="auth-actions">
+        {{ if .Username }}
+          <form method="POST" action="/logout" class="inline-form">
+            <button type="submit" class="button" aria-label="Logout">Logout</button>
+          </form>
+        {{ else }}
+          <a href="/login" class="button" aria-label="Login">Log in</a>
+          <a href="/signup" class="button" aria-label="Signup">Sign up</a>
+        {{ end }}
+      </div>
+    </div>
+  </header>
+
+  <main class="container forum-main post-page">
+    <div class="nav-return">
+      <a class="button small-button" href="/" aria-label="Back to home">← Back</a>
+    </div>
+
+    <article class="card post post-card" data-id="{{ .Post.ID }}">
+      <div class="post-top">
+        <div>
+          <div class="post-meta">
+            <strong>{{ .Post.Username }}</strong> · <span class="muted-small">{{ .Post.CreatedAt }}</span>
+          </div>
+          <h1 class="post-title">{{ .Post.Title }}</h1>
+        </div>
+        {{ if .Post.Categories }}
+          <div class="post-cats">
+            {{ range .Post.Categories }}<span class="cat-badge">{{ . }}</span>{{ end }}
+          </div>
+        {{ end }}
+      </div>
+      <div class="post-content">{{ .Post.Content }}</div>
+
+      <div class="post-actions">
+        {{ if .Username }}
+          <form method="POST" action="/like" style="display:inline;">
+          <input type="hidden" name="post_id" value="{{ .Post.ID }}">
+          <button type="submit" class="like-btn{{ if index .LikedPosts .Post.ID }} active{{ end }}">
+            <img src="/statics/image/like.png" alt="Like" />
+            <span class="count">{{ .Post.Likes }}</span>
+          </button>
+        </form>
+
+          <form method="POST" action="/dislike" style="display:inline;">
+          <input type="hidden" name="post_id" value="{{ .Post.ID }}">
+          <button type="submit" class="dislike-btn{{ if index .DislikedPosts .Post.ID }} active{{ end }}">
+            <img src="/statics/image/dislike.png" alt="Dislike" />
+            <span class="count">{{ .Post.Dislikes }}</span>
+          </button>
+        </form>
+        {{ else }}
+        <span class="disabled-like"><img src="/statics/image/like.png" alt="Like" /> <span class="count">{{ .Post.Likes }}</span></span>
+        <span class="disabled-dislike"><img src="/statics/image/dislike.png" alt="Dislike" /> <span class="count">{{ .Post.Dislikes }}</span></span>
+        {{ end }}
+      </div>
+    </article>
+
+    <section class="card replies-card">
+      <h3>Replies ({{ len .Post.Replies }})</h3>
+
+      {{ if .Post.Replies }}
+        <div class="replies-list">
+          {{ range .Post.Replies }}
+            <article class="card reply" data-id="{{ .ID }}">
+              <div class="post-meta"><strong>{{ .Username }}</strong> · <span class="muted-small">{{ .CreatedAt }}</span></div>
+              <p>{{ .Content }}</p>
+
+              <div class="post-actions">
+                {{ if $.Username }}
+                  <form method="POST" action="/like" style="display:inline;">
+                  <input type="hidden" name="comment_id" value="{{ .ID }}">
+                  <button type="submit" class="like-btn{{ if index $.LikedComments .ID }} active{{ end }}">
+                    <img src="/statics/image/like.png" alt="Like" />
+                    <span class="count">{{ .Likes }}</span>
+                  </button>
+                </form>
+
+                  <form method="POST" action="/dislike" style="display:inline;">
+                  <input type="hidden" name="comment_id" value="{{ .ID }}">
+                  <button type="submit" class="dislike-btn{{ if index $.DislikedComments .ID }} active{{ end }}">
+                    <img src="/statics/image/dislike.png" alt="Dislike" />
+                    <span class="count">{{ .Dislikes }}</span>
+                  </button>
+                </form>
+                {{ else }}
+                <span class="disabled-like"><img src="/statics/image/like.png" alt="Like" /> <span class="count">{{ .Likes }}</span></span>
+                <span class="disabled-dislike"><img src="/statics/image/dislike.png" alt="Dislike" /> <span class="count">{{ .Dislikes }}</span></span>
+                {{ end }}
+              </div>
+            </article>
+          {{ end }}
+        </div>
+      {{ else }}
+        <p class="small">No replies yet. Be the first!</p>
+      {{ end }}
+
+      <div class="card new-reply">
+        <form method="POST" action="/reply">
+          <input type="hidden" name="post_id" value="{{ .Post.ID }}" />
+          <label>Reply
+            <textarea name="content" rows="4" placeholder="Write your reply..." required></textarea>
+          </label>
+
+          {{ if .Username }}
+            <div style="margin-top:8px;">
+              <button type="submit" class="button">Post reply</button>
+            </div>
+          {{ else }}
+            <p class="small muted-small">You must <a href="/login">log in</a> to reply.</p>
+          {{ end }}
+        </form>
+      </div>
+    </section>
+  </main>
+    <script src="/statics/js/likecolor.js"></script>
+  </body>
+  </html>
