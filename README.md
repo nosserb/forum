@@ -19,11 +19,12 @@ docker/
 
 Pour construire l’image Docker depuis le dossier docker :
 
-`docker build -t forumdocker .`
+`docker build -t forumdocker .` 
 
--t forumdocker est le nom de l’image. Pour lancer le conteneur :
+(forumdocker est le nom de l’image)
+
+Pour lancer le conteneur :
 
 `docker run -it -p 8080:8080 forumdocker`
 
 -it active le mode interactif pour voir les logs
-    
