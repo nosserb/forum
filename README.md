@@ -21,3 +21,11 @@ Pour lancer le conteneur :
 `docker run -it -p 8080:8080 forumdocker`
 <br>
 ( -it active le mode interactif pour voir les logs )
+
+<br>
+
+### Crédit
+
+Ce projet est à l'origine un sujet du cursus commun de Zone01.
+
+Celui-ci a été réalisé en collaboration avec [LeRacoune](https://github.com/LeRacoune) et [rmaillard](https://github.com/rmaillard2101)
