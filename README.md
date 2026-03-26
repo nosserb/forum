@@ -26,6 +26,6 @@ Pour lancer le conteneur :
 
 ### Crédit
 
-Ce projet est à l'origine un sujet du cursus commun de Zone01.
+Ce repo est la version open-source d'un projet du cursus commun de Zone01 nommé `forum`, renforcé par un projet `real time forum` plus avancé. 
 
-Celui-ci a été réalisé en collaboration avec [LeRacoune](https://github.com/LeRacoune) et [rmaillard](https://github.com/rmaillard2101)
+Le travail sur ce projet a été réalisé en collaboration avec [LeRacoune](https://github.com/LeRacoune) et [rmaillard](https://github.com/rmaillard2101)
