@@ -1,31 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Forum</title>
-        <link rel="stylesheet" href="/statics/error.css" />
-        <link rel="icon" href="/statics/favicon.ico?v=2">
-    </head>
-    <body>
-        <div class="error-container">
-            <div class="error-grid">
-                    <header class="error-code">
-                        <h1>Error {{.Code}}</h1>
-                    </header>
-                    <div class="error-error">
-                        <h2>{{.Error}}</h2>
-                    </div>
-                    <div class="error-image">
-                        <img src="/statics/image/error.png" alt="Error-logo">
-                    </div>
-                    <div class="error-message">
-                        <h3>{{.Message}}</h3>
-                    </div>
-
-                    <button class="return" onclick="window.location.href='/'">
-                        <span class="arrow-text">RETURN<br>HOME</span>
-                    </button>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error {{.Code}}</title>
+    <link rel="stylesheet" href="/statics/forum.css">
+</head>
+<body>
+    <div class="container">
+        <div id="errorModal" class="error-modal active">
+            <div class="error-modal-content">
+                <div class="error-modal-code" style="color: #fff; font-weight: 700; font-size: 32px;">{{.Code}}</div>
+                <h2 class="error-modal-title">{{.Error}}</h2>
+                <p class="error-modal-message">{{.Message}}</p>
+                <button class="error-modal-btn" onclick="window.location.href='/'">OK</button>
             </div>
         </div>
+    </div>
+</body>
 </html>

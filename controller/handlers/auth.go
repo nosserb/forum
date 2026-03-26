@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"forum/controller/cookies"
@@ -14,6 +15,11 @@ import (
 
 // Gère l'inscription
 func SignupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates *template.Template) {
+	const (
+		minAge = 13
+		maxAge = 120
+	)
+
 	if r.Method != http.MethodPost {
 		if templates != nil {
 			_ = templates.ExecuteTemplate(w, "signup.html", nil)
@@ -26,22 +32,43 @@ func SignupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates
 
 	email := strings.TrimSpace(r.FormValue("email"))
 	username := strings.TrimSpace(r.FormValue("username"))
+	firstName := strings.TrimSpace(r.FormValue("firstName"))
+	lastName := strings.TrimSpace(r.FormValue("lastName"))
+	gender := strings.TrimSpace(r.FormValue("gender"))
+	ageStr := strings.TrimSpace(r.FormValue("age"))
 	password := r.FormValue("password")
 
 	log.Printf("[SIGNUP] Attempt: Email=%s, Username=%s", email, username)
 
 	// should not happen but anyway
-	if email == "" || password == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		ErrorHandler(w, r, http.StatusBadRequest, "Email and password required")
+	if email == "" || password == "" || username == "" || gender == "" || ageStr == "" {
+		ErrorHandler(w, r, http.StatusBadRequest, "Email, username, age, gender and password required")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(username) > 20 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Username must be 20 characters or fewer")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(password) < 8 || len(password) > 25 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Password must be between 8 and 25 characters")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	age, err := strconv.Atoi(ageStr)
+	if err != nil || age < minAge || age > maxAge {
+		ErrorHandler(w, r, http.StatusBadRequest, "Age must be between 13 and 120")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
 
 	// email or username is already used
-	userID, err := forumDB.InsertUser(db, email, username, password)
+	userID, err := forumDB.InsertUser(db, email, username, firstName, lastName, gender, password, age)
 	if err != nil {
-		w.WriteHeader(http.StatusConflict)
 		logging.Logger.Printf("[SIGNUP] InsertUser error: %v", err)
 		ErrorHandler(w, r, http.StatusConflict, "Cannot create account (email or username already used)")
 		return
@@ -52,7 +79,6 @@ func SignupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates
 	// Init session ID cookie
 	err = cookies.WriteSessionCookie(w, r, userID)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 		logging.Logger.Printf("Error writing session cookie : %v", err)
 		return
@@ -74,56 +100,46 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates 
 		return
 	}
 
-	email := strings.TrimSpace(r.FormValue("email"))
+	identifier := strings.TrimSpace(r.FormValue("email"))
 	password := r.FormValue("password")
 
-	log.Printf("[LOGIN] Attempt: Email=%s", email)
+	log.Printf("[LOGIN] Attempt: Identifier=%s", identifier)
 
-	if email == "" || password == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		ErrorHandler(w, r, http.StatusBadRequest, "Email and password required")
+	if identifier == "" || password == "" {
+		ErrorHandler(w, r, http.StatusBadRequest, "Email or nickname and password required")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
 
-	user, err := forumDB.FindUser(db, email)
+	user, err := forumDB.FindUser(db, identifier)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		logging.Logger.Printf("[LOGIN] FindUser error: %v", err)
-		ErrorHandler(w, r, http.StatusUnauthorized, "Invalid email or password")
-		return
+		users, uErr := forumDB.FetchUsersBy(db, "username", identifier)
+		if uErr != nil || len(users) == 0 {
+			logging.Logger.Printf("[LOGIN] FindUser error: %v", err)
+			ErrorHandler(w, r, http.StatusUnauthorized, "Invalid email or password")
+			return
+		}
+		user = users[0]
 	}
 
 	if user.Password != password {
-		w.WriteHeader(http.StatusUnauthorized)
-		logging.Logger.Printf("[LOGIN] Incorrect password for Email=%s", email)
+		logging.Logger.Printf("[LOGIN] Incorrect password for Identifier=%s", identifier)
 		ErrorHandler(w, r, http.StatusUnauthorized, "Invalid email or password")
 		return
-	}
-
-	username := user.Username
-	if username == "" {
-		if at := strings.Index(email, "@"); at > 0 {
-			username = email[:at]
-		} else {
-			username = email
-		}
 	}
 
 	session, _ := forumDB.FetchSessionByUser(db, int64(user.ID))
 	if session != (forumDB.Session{}) {
-		w.WriteHeader(http.StatusUnauthorized)
 		logging.Logger.Printf("[LOGIN] User %s is already logged in", user.Username)
 		ErrorHandler(w, r, http.StatusUnauthorized, "User is already logged in")
 		return
 	}
 
-	log.Printf("[LOGIN] Successful login: Username=%s", username)
+	log.Printf("[LOGIN] Successful login: Username=%s", user.Username)
 
 	// Init session ID cookie
 	err = cookies.WriteSessionCookie(w, r, int64(user.ID))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 		logging.Logger.Printf("Error writing session cookie : %v", err)
 		return

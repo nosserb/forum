@@ -79,7 +79,7 @@ func WriteSessionCookie(w http.ResponseWriter, r *http.Request, userID int64) er
 		Path:     "/",
 		MaxAge:   3600,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	}
 
@@ -101,7 +101,14 @@ func EndSession(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// Expire cookie with same attributes
+	cookie.Value = ""
+	cookie.Path = "/"
 	cookie.MaxAge = -1
+	cookie.HttpOnly = true
+	cookie.Secure = false
+	cookie.SameSite = http.SameSiteLaxMode
+	cookie.Expires = time.Unix(0, 0)
 	http.SetCookie(w, cookie)
 	return nil
 }

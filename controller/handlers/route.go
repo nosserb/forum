@@ -34,6 +34,7 @@ func RegisterRoutes(mux *http.ServeMux, tmpl *template.Template, dbConn *sql.DB)
 	mux.HandleFunc("/logout", LogoutHandler)
 	mux.HandleFunc("/like", LikeHandler)
 	mux.HandleFunc("/dislike", DislikeHandler)
+	mux.HandleFunc("/filter", FilterHandler)
 
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		LoginHandler(w, r, dbConn, templates)

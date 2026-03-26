@@ -8,8 +8,12 @@ import (
 
 type User struct {
 	ID        int       `db:"id"`
-	Email     string    `db:"email"`
 	Username  string    `db:"username"`
+	FirstName string    `db:"first_name"`
+	LastName  string    `db:"last_name"`
+	Age       int       `db:"age"`
+	Gender    string    `db:"gender"`
+	Email     string    `db:"email"`
 	Password  string    `db:"password"`
 	CreatedAt time.Time `db:"created_at"`
 }
@@ -21,13 +25,14 @@ type Session struct {
 }
 
 type Post struct {
-	ID        int       `db:"id"`
-	AuthorID  int       `db:"author_id"`
-	Title     string    `db:"title"`
-	Content   string    `db:"content"`
-	Likes     int       `db:"likes"`
-	Dislikes  int       `db:"dislikes"`
-	CreatedAt time.Time `db:"created_at"`
+	ID             int       `db:"id"`
+	AuthorID       int       `db:"author_id"`
+	AuthorUsername string    `db:"username"`
+	Title          string    `db:"title"`
+	Content        string    `db:"content"`
+	Likes          int       `db:"likes"`
+	Dislikes       int       `db:"dislikes"`
+	CreatedAt      time.Time `db:"created_at"`
 }
 
 type Comment struct {
@@ -53,24 +58,37 @@ type PostCategory struct {
 type Reaction struct {
 	ID        int       `db:"id"`
 	UserID    int       `db:"user_id"`
-	PostID    *int      `db:"post_id"`    // pointeur pour permettre NULL
-	CommentID *int      `db:"comment_id"` // pointeur pour permettre NULL
-	Type      string    `db:"type"`       // "like" ou "dislike"
+	PostID    *int      `db:"post_id"`
+	CommentID *int      `db:"comment_id"`
+	Type      string    `db:"type"`
 	CreatedAt time.Time `db:"created_at"`
+}
+
+type PrivateMessage struct {
+	ID         int       `db:"id"`
+	SenderID   int       `db:"sender_id"`
+	ReceiverID int       `db:"receiver_id"`
+	Content    string    `db:"content"`
+	ReadStatus string    `db:"read_status"`
+	CreatedAt  time.Time `db:"created_at"`
 }
 
 func Initialisation(database *sql.DB) {
 	var err error
 
 	_, err = database.Exec(`
-	CREATE TABLE IF NOT EXISTS users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		email TEXT NOT NULL UNIQUE,
-		username TEXT NOT NULL UNIQUE,
-		password TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-	`)
+CREATE TABLE IF NOT EXISTS users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	email TEXT NOT NULL UNIQUE,
+	username TEXT NOT NULL UNIQUE,
+	first_name TEXT NOT NULL,
+	last_name TEXT NOT NULL,
+	age INTEGER NOT NULL,
+	gender TEXT NOT NULL,
+	password TEXT NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`)
 	if err != nil {
 		log.Fatalf("Error users table : %v", err)
 	}
@@ -130,7 +148,6 @@ func Initialisation(database *sql.DB) {
 		log.Fatalf("Error categories table : %v", err)
 	}
 
-	// Implémente les catégories
 	_, err = database.Exec(`
 	INSERT OR IGNORE INTO categories (name) VALUES
 	('Gaming'), ('Cook'), ('Anime'), ('Movie'), ('Others');
@@ -153,25 +170,40 @@ func Initialisation(database *sql.DB) {
 	}
 
 	_, err = database.Exec(`
-CREATE TABLE IF NOT EXISTS reactions (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	user_id INTEGER NOT NULL,
-	post_id INTEGER,
-	comment_id INTEGER,
-	type TEXT NOT NULL CHECK (type IN ('like', 'dislike')),
-	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (user_id) REFERENCES users(id),
-	FOREIGN KEY (post_id) REFERENCES posts(id),
-	FOREIGN KEY (comment_id) REFERENCES comments(id),
-	CHECK (
-		(post_id IS NOT NULL AND comment_id IS NULL) OR
-		(post_id IS NULL AND comment_id IS NOT NULL)
-	),
+	CREATE TABLE IF NOT EXISTS reactions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		post_id INTEGER,
+		comment_id INTEGER,
+		type TEXT NOT NULL CHECK (type IN ('like', 'dislike')),
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		FOREIGN KEY (post_id) REFERENCES posts(id),
+		FOREIGN KEY (comment_id) REFERENCES comments(id),
+		CHECK (
+			(post_id IS NOT NULL AND comment_id IS NULL) OR
+			(post_id IS NULL AND comment_id IS NOT NULL)
+		),
 	UNIQUE (user_id, post_id, comment_id)
-);
-`)
+	);
+	`)
 	if err != nil {
 		log.Fatalf("Error reactions table : %v", err)
 	}
 
+	_, err = database.Exec(`
+	CREATE TABLE IF NOT EXISTS private_messages (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		sender_id INTEGER NOT NULL,
+		receiver_id INTEGER NOT NULL,
+		content TEXT NOT NULL,
+		read_status TEXT NOT NULL DEFAULT 'unread' CHECK (read_status IN ('read', 'unread')),
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (sender_id) REFERENCES users(id),
+		FOREIGN KEY (receiver_id) REFERENCES users(id)
+	);
+	`)
+	if err != nil {
+		log.Fatalf("Error private_messages table: %v", err)
+	}
 }

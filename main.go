@@ -39,7 +39,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	fs := http.FileServer(http.Dir("./view/assets/statics"))
+	fs := http.FileServer(http.Dir("./view/assets/static"))
 	mux.Handle("/statics/", http.StripPrefix("/statics/", fs))
 
 	// tmp := fetch all posts
@@ -67,11 +67,17 @@ func main() {
 	// handlers db init - temporary
 	handlers.SetDB(db)
 
-	// tmp - filter handler
-	mux.HandleFunc("/filter", handlers.FilterHandler)
-
 	// Init custom logger
 	logging.Init()
+
+	// websocket //
+	manager := handlers.NewManager()
+	handler := &handlers.Handler{
+		DB:      db,
+		Manager: manager,
+	}
+	mux.Handle("/ws", handler)
+	// --- //
 
 	logging.Logger.Println("Server starting : http://localhost:8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {

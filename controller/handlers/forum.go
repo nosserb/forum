@@ -33,7 +33,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	logging.Logger.Println("[LOGOUT] called")
 	err := cookies.EndSession(w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
 		return

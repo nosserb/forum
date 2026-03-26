@@ -9,10 +9,10 @@ func FindUser(db *sql.DB, email string) (User, error) {
 	var u User
 
 	// Lance la requête SQL qui sélectionne les informations de l'utilisateur correspondant à l'email
-	row := db.QueryRow("SELECT id, email, username, password, created_at FROM users WHERE email = ?", email)
+	row := db.QueryRow("SELECT id, email, username, first_name, last_name, age, gender, password, created_at FROM users WHERE email = ?", email)
 
 	// On lis les données de la ligne retournée par la requête
-	err := row.Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.CreatedAt)
+	err := row.Scan(&u.ID, &u.Email, &u.Username, &u.FirstName, &u.LastName, &u.Age, &u.Gender, &u.Password, &u.CreatedAt)
 
 	if err != nil {
 		return u, err

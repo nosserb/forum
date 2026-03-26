@@ -6,7 +6,7 @@ import (
 )
 
 func FetchUsers(db *sql.DB) ([]User, error) {
-	rows, err := db.Query("SELECT id, email, username, password, created_at FROM users")
+	rows, err := db.Query("SELECT id, email, username, first_name, last_name, age, gender, password, created_at FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -15,7 +15,8 @@ func FetchUsers(db *sql.DB) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.FirstName, &u.LastName, &u.Age, &u.Gender, &u.Password, &u.CreatedAt); err != nil {
+
 			return nil, err
 		}
 		users = append(users, u)
@@ -25,9 +26,13 @@ func FetchUsers(db *sql.DB) ([]User, error) {
 
 func FetchUsersBy(db *sql.DB, field string, value any) ([]User, error) {
 	allowedFields := map[string]bool{
-		"id":       true,
-		"email":    true,
-		"username": true,
+		"id":         true,
+		"email":      true,
+		"username":   true,
+		"first_name": true,
+		"last_name":  true,
+		"age":        true,
+		"gender":     true,
 	}
 
 	if !allowedFields[field] {
@@ -35,7 +40,7 @@ func FetchUsersBy(db *sql.DB, field string, value any) ([]User, error) {
 	}
 
 	query := `
-		SELECT id, email, username, password, created_at
+		SELECT id, email, username, first_name, last_name, age, gender, password, created_at
 		FROM users
 		WHERE ` + field + ` = ?`
 
@@ -48,7 +53,7 @@ func FetchUsersBy(db *sql.DB, field string, value any) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.FirstName, &u.LastName, &u.Age, &u.Gender, &u.Password, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		users = append(users, u)
@@ -86,11 +91,11 @@ func FetchSessionByUser(db *sql.DB, userID int64) (Session, error) {
 func FetchUserBySession(db *sql.DB, sessionID string) (User, error) {
 	var u User
 	err := db.QueryRow(`
-        SELECT u.id, u.email, u.username, u.password, u.created_at
+        SELECT u.id, u.email, u.username, u.first_name, u.last_name, u.age, u.gender, u.password, u.created_at
         FROM users u
         JOIN sessions s ON u.id = s.user_id
         WHERE s.session_id = ?`, sessionID).
-		Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.CreatedAt)
+		Scan(&u.ID, &u.Email, &u.Username, &u.FirstName, &u.LastName, &u.Age, &u.Gender, &u.Password, &u.CreatedAt)
 	if err != nil {
 		return u, err
 	}
@@ -99,8 +104,10 @@ func FetchUserBySession(db *sql.DB, sessionID string) (User, error) {
 
 func FetchPosts(db *sql.DB) ([]Post, error) {
 	rows, err := db.Query(`
-		SELECT id, author_id, title, content, likes, dislikes, created_at
-		FROM posts
+		SELECT p.id, p.author_id, p.title, p.content, p.likes, p.dislikes, p.created_at, u.username
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		ORDER BY p.created_at DESC
 	`)
 	if err != nil {
 		return nil, err
@@ -110,7 +117,7 @@ func FetchPosts(db *sql.DB) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		var p Post
-		err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt)
+		err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt, &p.AuthorUsername)
 		if err != nil {
 			return nil, err
 		}
@@ -134,9 +141,11 @@ func FetchPostsBy(db *sql.DB, field string, value any) ([]Post, error) {
 	}
 
 	query := `
-		SELECT id, author_id, title, content, likes, dislikes, created_at
-		FROM posts
-		WHERE ` + field + ` = ?`
+		SELECT p.id, p.author_id, p.title, p.content, p.likes, p.dislikes, p.created_at, u.username
+		FROM posts p
+		JOIN users u ON u.id = p.author_id
+		WHERE p.` + field + ` = ?
+		ORDER BY p.created_at DESC`
 
 	rows, err := db.Query(query, value)
 	if err != nil {
@@ -147,7 +156,7 @@ func FetchPostsBy(db *sql.DB, field string, value any) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		var p Post
-		if err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt, &p.AuthorUsername); err != nil {
 			return nil, err
 		}
 		posts = append(posts, p)
@@ -317,4 +326,158 @@ func FetchReactionsBy(db *sql.DB, field string, value any) ([]Reaction, error) {
 		reactions = append(reactions, r)
 	}
 	return reactions, nil
+}
+
+func FetchPrivateMessages(db *sql.DB) ([]PrivateMessage, error) {
+	rows, err := db.Query(`
+		SELECT id, sender_id, receiver_id, content, read_status, created_at
+		FROM private_messages
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []PrivateMessage
+	for rows.Next() {
+		var pm PrivateMessage
+		if err := rows.Scan(
+			&pm.ID,
+			&pm.SenderID,
+			&pm.ReceiverID,
+			&pm.Content,
+			&pm.ReadStatus,
+			&pm.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		messages = append(messages, pm)
+	}
+	return messages, nil
+}
+
+func FetchPrivateMessagesBy(db *sql.DB, field string, value any) ([]PrivateMessage, error) {
+	allowedFields := map[string]bool{
+		"id":          true,
+		"sender_id":   true,
+		"receiver_id": true,
+	}
+
+	if !allowedFields[field] {
+		return nil, fmt.Errorf("invalid filter field: %s", field)
+	}
+
+	query := `
+		SELECT id, sender_id, receiver_id, content, read_status, created_at
+		FROM private_messages
+		WHERE ` + field + ` = ?
+		ORDER BY created_at DESC`
+
+	rows, err := db.Query(query, value)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []PrivateMessage
+	for rows.Next() {
+		var pm PrivateMessage
+		if err := rows.Scan(
+			&pm.ID,
+			&pm.SenderID,
+			&pm.ReceiverID,
+			&pm.Content,
+			&pm.ReadStatus,
+			&pm.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		messages = append(messages, pm)
+	}
+	return messages, nil
+}
+
+func FetchPrivateMessagesBetween(db *sql.DB, userA, userB int64, limit, offset int) ([]PrivateMessage, error) {
+	rows, err := db.Query(`
+		SELECT id, sender_id, receiver_id, content, read_status, created_at
+		FROM private_messages
+		WHERE 
+			(sender_id = ? AND receiver_id = ?)
+			OR
+			(sender_id = ? AND receiver_id = ?)
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`, userA, userB, userB, userA, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []PrivateMessage
+	for rows.Next() {
+		var pm PrivateMessage
+		if err := rows.Scan(
+			&pm.ID,
+			&pm.SenderID,
+			&pm.ReceiverID,
+			&pm.Content,
+			&pm.ReadStatus,
+			&pm.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		messages = append(messages, pm)
+	}
+	return messages, nil
+}
+
+func FetchPrivateMessageCorrespondents(db *sql.DB, userID int64) ([]int64, error) {
+	rows, err := db.Query(`
+		SELECT DISTINCT
+			CASE
+				WHEN sender_id = ? THEN receiver_id
+				ELSE sender_id
+			END AS correspondent_id
+		FROM private_messages
+		WHERE sender_id = ? OR receiver_id = ?
+	`, userID, userID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var correspondents []int64
+
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		correspondents = append(correspondents, id)
+	}
+
+	return correspondents, nil
+}
+
+func FetchOnlineUsers(db *sql.DB) ([]User, error) {
+	rows, err := db.Query(`
+		SELECT DISTINCT u.id, u.email, u.username, u.first_name, u.last_name, u.age, u.gender, u.password, u.created_at
+		FROM users u
+		JOIN sessions s ON u.id = s.user_id
+		ORDER BY u.username`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.FirstName, &u.LastName, &u.Age, &u.Gender, &u.Password, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
 }

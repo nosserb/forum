@@ -22,15 +22,22 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Récupérer l'utilisateur
 	user := getUserFromCookie(r)
+	var sessionID string
+	if cookie, err := r.Cookie("sessionCookie"); err == nil {
+		if _, err := forumDB.FetchSession(db, cookie.Value); err == nil {
+			sessionID = cookie.Value
+		}
+	}
 
 	// init empty data
 	filteredData := data.AllData{
-		Username: user.Username,
+		Username:  user.Username,
+		UserID:    user.ID,
+		SessionID: sessionID,
 	}
 
 	allPosts, err := forumDB.FetchPosts(db)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusMethodNotAllowed)
 		return
@@ -40,17 +47,16 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 	for _, post := range allPosts {
 
 		// Categories Filter
-		if r.FormValue("Categories") != "none" {
-			categoryID, err := strconv.Atoi(r.FormValue("Categories"))
+		categoriesValue := r.FormValue("Categories")
+		if categoriesValue != "none" && categoriesValue != "" {
+			categoryID, err := strconv.Atoi(categoriesValue)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
 				ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
 				return
 			}
 			relationTable, err := forumDB.FetchPostCategoriesBy(db, "category_id", categoryID)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
 				ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
 				return
@@ -71,9 +77,7 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("created") == "on" {
 			user := getUserFromCookie(r)
 			if user == (forumDB.User{}) {
-				w.WriteHeader(http.StatusInternalServerError)
-				ErrorHandler(w, r, http.StatusInternalServerError, "User is not logged in")
-				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
+				http.Redirect(w, r, "/", http.StatusSeeOther)
 				return
 			}
 			if post.AuthorID != user.ID {
@@ -85,15 +89,12 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("liked") == "on" {
 			user := getUserFromCookie(r)
 			if user == (forumDB.User{}) {
-				w.WriteHeader(http.StatusInternalServerError)
-				ErrorHandler(w, r, http.StatusInternalServerError, "User is not logged in")
-				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
+				http.Redirect(w, r, "/", http.StatusSeeOther)
 				return
 			}
 
 			reactions, err := forumDB.FetchReactionsBy(db, "post_id", post.ID)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
 				ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
 				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
 				return
@@ -102,6 +103,60 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 			found := false
 			for _, react := range reactions {
 				if react.UserID == user.ID && react.Type == "like" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Disliked Filter
+		if r.FormValue("disliked") == "on" {
+			user := getUserFromCookie(r)
+			if user == (forumDB.User{}) {
+				http.Redirect(w, r, "/", http.StatusSeeOther)
+				return
+			}
+
+			reactions, err := forumDB.FetchReactionsBy(db, "post_id", post.ID)
+			if err != nil {
+				ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
+				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
+				return
+			}
+
+			found := false
+			for _, react := range reactions {
+				if react.UserID == user.ID && react.Type == "dislike" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Commented Filter
+		if r.FormValue("commented") == "on" {
+			user := getUserFromCookie(r)
+			if user == (forumDB.User{}) {
+				http.Redirect(w, r, "/", http.StatusSeeOther)
+				return
+			}
+
+			comments, err := forumDB.FetchCommentsBy(db, "post_id", post.ID)
+			if err != nil {
+				ErrorHandler(w, r, http.StatusInternalServerError, err.Error())
+				logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusInternalServerError)
+				return
+			}
+
+			found := false
+			for _, comment := range comments {
+				if comment.AuthorID == user.ID {
 					found = true
 					break
 				}
@@ -125,8 +180,15 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 
 	filteredData.Liked, filteredData.Disliked = GetUserReactions(db, user)
 
+	// Récupère les utilisateurs online
+	onlineUsers, err := forumDB.FetchOnlineUsers(db)
+	if err != nil {
+		logging.Logger.Printf("Error fetching online users: %v", err)
+		onlineUsers = []forumDB.User{}
+	}
+	filteredData.OnlineUsers = onlineUsers
+
 	if err := templates.ExecuteTemplate(w, "forum.html", filteredData); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Error executing forum template: %v", err)
 		ErrorHandler(w, r, http.StatusInternalServerError, "Error rendering template")
 		return

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,24 +12,24 @@ import (
 )
 
 type Reply struct {
-	Username  string
-	Content   string
-	CreatedAt string
-	ID        int
-	Likes     int
-	Dislikes  int
+	Username  string `json:"username"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+	ID        int    `json:"id"`
+	Likes     int    `json:"likes"`
+	Dislikes  int    `json:"dislikes"`
 }
 
 type Post struct {
-	ID         int
-	Username   string
-	Title      string
-	Content    string
-	Replies    []Reply
-	CreatedAt  string
-	Likes      int
-	Dislikes   int
-	Categories []string
+	ID         int      `json:"id"`
+	Username   string   `json:"username"`
+	Title      string   `json:"title"`
+	Content    string   `json:"content"`
+	Replies    []Reply  `json:"replies"`
+	CreatedAt  string   `json:"createdAt"`
+	Likes      int      `json:"likes"`
+	Dislikes   int      `json:"dislikes"`
+	Categories []string `json:"categories"`
 }
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,11 +46,24 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	title := r.FormValue("title")
 	content := r.FormValue("content")
+	trimmedTitle := strings.TrimSpace(title)
+	trimmedContent := strings.TrimSpace(content)
 
 	// return error if empty title/content
-	if strings.TrimSpace(content) == "" || strings.TrimSpace(title) == "" {
-		w.WriteHeader(http.StatusBadRequest)
+	if trimmedContent == "" || trimmedTitle == "" {
 		ErrorHandler(w, r, http.StatusBadRequest, "Titre ou contenu du post vide")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(title) > 100 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Le titre doit faire au maximum 100 caractères")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(content) > 7500 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Le contenu doit faire au maximum 7500 caractères")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
@@ -58,7 +71,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	// Insert en DB
 	postID, err := forumDB.InsertPost(db, int64(user.ID), title, content)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de la création du post")
 		logging.Logger.Printf("InsertPost error: %v", err)
 		return
@@ -93,156 +105,156 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		w.WriteHeader(http.StatusNotFound)
-		ErrorHandler(w, r, http.StatusNotFound, "ID not found")
-		logging.Logger.Printf("ID \"%v\" not found", idStr)
+	// Récupérer l'ID du post
+	postIDStr := r.URL.Query().Get("id")
+	if postIDStr == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	// TO DO : fix to another code
-	id, err := strconv.Atoi(idStr)
+	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		ErrorHandler(w, r, http.StatusBadRequest, "Invalid post ID")
-		logging.Logger.Printf("Invalid post ID : %v", id)
 		return
 	}
 
-	// Récupère le post depuis la DB
-	posts, err := forumDB.FetchPostsBy(db, "id", id)
+	// Récupérer le post
+	posts, err := forumDB.FetchPostsBy(db, "id", postID)
 	if err != nil || len(posts) == 0 {
-		w.WriteHeader(http.StatusNotFound)
 		ErrorHandler(w, r, http.StatusNotFound, "Post not found")
-		logging.Logger.Printf("Post %v not found", id)
+		logging.Logger.Printf("Post not found: %d", postID)
 		return
 	}
-	dbPost := posts[0]
+	post := posts[0]
 
-	// Récupère les réactions de l'utilisateur (si connecté) pour marquer les boutons actifs
-	likedPosts := map[int]bool{}
-	dislikedPosts := map[int]bool{}
-	likedComments := map[int]bool{}
-	dislikedComments := map[int]bool{}
-	user := getUserFromCookie(r)
-	if user.Username != "" {
-		if reacts, err := forumDB.FetchReactionsBy(db, "user_id", user.ID); err == nil {
-			for _, rct := range reacts {
-				if rct.PostID != nil {
-					pid := *rct.PostID
-					if rct.Type == "like" {
-						likedPosts[pid] = true
-					} else if rct.Type == "dislike" {
-						dislikedPosts[pid] = true
-					}
-				}
-				if rct.CommentID != nil {
-					cid := *rct.CommentID
-					if rct.Type == "like" {
-						likedComments[cid] = true
-					} else if rct.Type == "dislike" {
-						dislikedComments[cid] = true
-					}
-				}
-			}
-		}
-	}
-
-	// Prend les données de la db pour les rendre prêt a l'affichage
-	viewPost := Post{
-		ID:        dbPost.ID,
-		Title:     dbPost.Title,
-		Content:   dbPost.Content,
-		Replies:   []Reply{},
-		CreatedAt: dbPost.CreatedAt.Format("2006-01-02 15:04"),
-		Likes:     dbPost.Likes,
-		Dislikes:  dbPost.Dislikes,
-	}
-
-	// Récupère les catégories liées au post (noms)
-	if pcs, err := forumDB.FetchPostCategoriesBy(db, "post_id", dbPost.ID); err == nil {
-		// build map id->name
-		catMap := map[int]string{}
-		if cats, err := forumDB.FetchCategories(db); err == nil {
-			for _, c := range cats {
-				catMap[c.ID] = c.Name
-			}
-		}
-
-		// if there are no categories in DB, provide default names for ids 1..5
-		if len(catMap) == 0 {
-			for i := 1; i <= 5; i++ {
-				catMap[i] = fmt.Sprintf("Cat %d", i)
-			}
-		}
-		for _, rel := range pcs {
-			if name, ok := catMap[rel.CategoryID]; ok {
-				viewPost.Categories = append(viewPost.Categories, name)
-			} else {
-				// fallback to id string
-				viewPost.Categories = append(viewPost.Categories, strconv.Itoa(rel.CategoryID))
-			}
-		}
-	}
-
-	// Récupérer le username de l'auteur du post
-	users, err := forumDB.FetchUsersBy(db, "id", dbPost.AuthorID)
+	// Récupérer l'auteur du post
+	users, err := forumDB.FetchUsersBy(db, "id", post.AuthorID)
+	postUsername := "Unknown"
 	if err == nil && len(users) > 0 {
-		viewPost.Username = users[0].Username
-	} else {
-		viewPost.Username = fmt.Sprintf("user#%d", dbPost.AuthorID)
+		postUsername = users[0].Username
 	}
 
-	// Récupérer les commentaires du post
-	comments, err := forumDB.FetchCommentsBy(db, "post_id", id)
+	// Récupérer les catégories du post
+	postCategories, err := forumDB.FetchPostCategoriesBy(db, "post_id", postID)
+	categories := []string{}
+	if err == nil {
+		allCategories, err := forumDB.FetchCategories(db)
+		if err == nil {
+			catMap := make(map[int]string)
+			for _, cat := range allCategories {
+				catMap[cat.ID] = cat.Name
+			}
+			for _, pc := range postCategories {
+				if name, ok := catMap[pc.CategoryID]; ok {
+					categories = append(categories, name)
+				}
+			}
+		}
+	}
+
+	// Récupérer les commentaires
+	comments, err := forumDB.FetchCommentsBy(db, "post_id", postID)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors du chargement des commentaires")
-		logging.Logger.Printf("Erreur lors du chargement des commentaires sur le post %v", id)
-		return
+		logging.Logger.Printf("Error fetching comments: %v", err)
+		comments = []forumDB.Comment{}
 	}
 
-	for _, c := range comments {
-		// Trouver le username de l'auteur du commentaire
-		cusers, err := forumDB.FetchUsersBy(db, "id", c.AuthorID)
-		uname := fmt.Sprintf("user#%d", c.AuthorID)
-		if err == nil && len(cusers) > 0 {
-			uname = cusers[0].Username
+	// Enrichir les commentaires avec les noms d'utilisateur
+	replies := []Reply{}
+	for _, comment := range comments {
+		users, err := forumDB.FetchUsersBy(db, "id", comment.AuthorID)
+		username := "Unknown"
+		if err == nil && len(users) > 0 {
+			username = users[0].Username
 		}
-		rep := Reply{
-			ID:        c.ID,
-			Username:  uname,
-			Content:   c.Content,
-			CreatedAt: c.CreatedAt.Format("2006-01-02 15:04"),
-			Likes:     c.Likes,
-			Dislikes:  c.Dislikes,
-		}
-		viewPost.Replies = append(viewPost.Replies, rep)
+
+		replies = append(replies, Reply{
+			ID:        comment.ID,
+			Username:  username,
+			Content:   comment.Content,
+			CreatedAt: comment.CreatedAt.Format("2006-01-02 15:04"),
+			Likes:     comment.Likes,
+			Dislikes:  comment.Dislikes,
+		})
 	}
 
-	data := struct {
-		Username         string
-		Post             *Post
-		LikedPosts       map[int]bool
-		DislikedPosts    map[int]bool
-		LikedComments    map[int]bool
-		DislikedComments map[int]bool
+	// Récupérer l'utilisateur connecté
+	user := getUserFromCookie(r)
+
+	// Récupérer les réactions de l'utilisateur
+	likedPosts := make(map[int]bool)
+	dislikedPosts := make(map[int]bool)
+	likedComments := make(map[int]bool)
+	dislikedComments := make(map[int]bool)
+
+	if user.ID != 0 {
+		reactions, err := forumDB.FetchReactionsBy(db, "user_id", user.ID)
+		if err == nil {
+			for _, reaction := range reactions {
+				if reaction.PostID != nil {
+					if reaction.Type == "like" {
+						likedPosts[*reaction.PostID] = true
+					} else if reaction.Type == "dislike" {
+						dislikedPosts[*reaction.PostID] = true
+					}
+				}
+				if reaction.CommentID != nil {
+					if reaction.Type == "like" {
+						likedComments[*reaction.CommentID] = true
+					} else if reaction.Type == "dislike" {
+						dislikedComments[*reaction.CommentID] = true
+					}
+				}
+			}
+		}
+	}
+
+	// Récupérer les utilisateurs online
+	onlineUsers, err := forumDB.FetchOnlineUsers(db)
+	if err != nil {
+		logging.Logger.Printf("Error fetching online users: %v", err)
+		onlineUsers = []forumDB.User{}
+	}
+
+	// Construire le view model
+	viewData := struct {
+		Username         string         `json:"username"`
+		Post             Post           `json:"post"`
+		LikedPosts       map[int]bool   `json:"likedPosts"`
+		DislikedPosts    map[int]bool   `json:"dislikedPosts"`
+		LikedComments    map[int]bool   `json:"likedComments"`
+		DislikedComments map[int]bool   `json:"dislikedComments"`
+		OnlineUsers      []forumDB.User `json:"onlineUsers"`
 	}{
-		Username:         getUserFromCookie(r).Username,
-		Post:             &viewPost,
+		Username: user.Username,
+		Post: Post{
+			ID:         post.ID,
+			Username:   postUsername,
+			Title:      post.Title,
+			Content:    post.Content,
+			CreatedAt:  post.CreatedAt.Format("2006-01-02 15:04"),
+			Likes:      post.Likes,
+			Dislikes:   post.Dislikes,
+			Categories: categories,
+			Replies:    replies,
+		},
 		LikedPosts:       likedPosts,
 		DislikedPosts:    dislikedPosts,
 		LikedComments:    likedComments,
 		DislikedComments: dislikedComments,
+		OnlineUsers:      onlineUsers,
 	}
 
-	if err := templates.ExecuteTemplate(w, "post.html", data); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logging.Logger.Printf("Error executing post template: %v", err)
-		ErrorHandler(w, r, http.StatusInternalServerError, "Error rendering template")
+	if r.Header.Get("X-Requested-With") == "XMLHttpRequest" || r.URL.Query().Get("format") == "json" {
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(viewData); err != nil {
+			ErrorHandler(w, r, http.StatusInternalServerError, "Error rendering JSON")
+			logging.Logger.Printf("JSON encode error: %v", err)
+		}
 		return
 	}
+
+	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
 }
 
 // Permet de répondre a un post uniquement si on est connecté
@@ -263,7 +275,6 @@ func ReplyHandler(w http.ResponseWriter, r *http.Request) {
 	postIDStr := r.FormValue("post_id")
 	postID, err := strconv.Atoi(postIDStr)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
 		ErrorHandler(w, r, http.StatusBadRequest, "Invalid post id")
 		logging.Logger.Printf("Invalid post ID : %v", postID)
 		return
@@ -271,7 +282,6 @@ func ReplyHandler(w http.ResponseWriter, r *http.Request) {
 
 	content := r.FormValue("content")
 	if strings.TrimSpace(content) == "" {
-		w.WriteHeader(http.StatusBadRequest)
 		ErrorHandler(w, r, http.StatusBadRequest, "Contenu du commentaire vide")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
@@ -284,11 +294,10 @@ func ReplyHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = forumDB.InsertComment(db, int64(postID), int64(user.ID), content)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de la publication du commentaire")
 		logging.Logger.Printf("InsertComment error: %v", err)
 		return
 	}
 
-	http.Redirect(w, r, "/post?id="+strconv.Itoa(postID), http.StatusSeeOther)
+	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
 }

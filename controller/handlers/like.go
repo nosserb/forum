@@ -13,13 +13,13 @@ import (
 // LikeHandler gère les likes en base et met à jour le compteur dans la table posts
 func LikeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	user := getUserFromCookie(r)
 	if user.Username == "" {
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -49,7 +49,7 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !hasPost && !hasComment {
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -57,7 +57,7 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 	reactions, err := forumDB.FetchReactionsBy(db, "user_id", user.ID)
 	if err != nil {
 		logging.Logger.Printf("FetchReactionsBy error: %v", err)
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -92,8 +92,19 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(b)
 			return
 		}
-		// fallback redirect
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		// Redirect back to post page if comment, otherwise home
+		if hasComment {
+			comments, err := forumDB.FetchCommentsBy(db, "id", int(commentID))
+			if err == nil && len(comments) > 0 {
+				http.Redirect(w, r, "/?post="+strconv.Itoa(comments[0].PostID), http.StatusSeeOther)
+				return
+			}
+		}
+		if hasPost {
+			http.Redirect(w, r, "/?post="+strconv.Itoa(int(postID)), http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 
 	// Si déjà like alors retirer
@@ -179,13 +190,13 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 // DislikeHandler gère les dislikes en base et met à jour le compteur
 func DislikeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	user := getUserFromCookie(r)
 	if user.Username == "" {
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -215,14 +226,14 @@ func DislikeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !hasPost && !hasComment {
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	reactions, err := forumDB.FetchReactionsBy(db, "user_id", user.ID)
 	if err != nil {
 		logging.Logger.Printf("FetchReactionsBy error: %v", err)
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -257,7 +268,19 @@ func DislikeHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(b)
 			return
 		}
-		http.Redirect(w, r, "/forum", http.StatusSeeOther)
+		// Redirect back to post page if comment, otherwise home
+		if hasComment {
+			comments, err := forumDB.FetchCommentsBy(db, "id", int(commentID))
+			if err == nil && len(comments) > 0 {
+				http.Redirect(w, r, "/?post="+strconv.Itoa(comments[0].PostID), http.StatusSeeOther)
+				return
+			}
+		}
+		if hasPost {
+			http.Redirect(w, r, "/?post="+strconv.Itoa(int(postID)), http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 
 	// Si déjà dislike on retire
