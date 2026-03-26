@@ -8,6 +8,11 @@ Prérequis : Docker installé et Linux (Ubuntu 24.04 recommandé).
 
 <br>
 
+> [!WARNING]    
+Le dockerfile est actuellement dysfonctionnel. Nous travaillons à le rendre utilisable à nouveau.
+
+<br>
+
 Pour construire l’image Docker depuis le dossier docker :
 
 `docker build -t forumdocker .` 
