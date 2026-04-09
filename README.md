@@ -29,6 +29,12 @@ Pour lancer le conteneur :
 
 <br>
 
+
+> [!IMPORTANT]  
+Les commits peuvent sembler lourds et peu optimisés, et c'est le cas. Étant donné que c'est un projet d'étude nous ne pouvons pas importer l'historiques de commits complet, ils sont donc regroupés par ajout majeur ou modification spécifiques à ce repo.
+
+<br>
+
 ### Crédit
 
 Ce repo est la version open-source d'un projet du cursus commun de Zone01 nommé `forum`, renforcé par un projet `real time forum` plus avancé. 
