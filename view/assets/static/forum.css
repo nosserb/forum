@@ -1878,12 +1878,55 @@ body {
 }
 
 .back-btn:hover {
-    background: #55c0b5;
-    border-color: #55c0b5;
+    color: #ffffff;
+    background: #1f56b8;
+    border-color: rgba(184, 219, 255, 0.9);
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 14px rgba(74, 154, 255, 0.45);
 }
 
 .back-btn:active {
     transform: translateY(0);
+}
+
+/* ajout a deplacer */
+#notif-box {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+
+  transform: translate(-50%, 0);
+
+  background: rgba(30, 30, 30, 0.9);
+  color: white;
+
+  padding: 10px 16px;
+  border-radius: 6px;
+
+  display: none;
+
+  min-width: 200px;
+  max-width: 500px;
+
+  z-index: 999999;
+}
+
+#notif-box.active {
+  display: block;
+}
+
+#notif-text {
+  display: inline-block;
+  margin-right: 20px;
+}
+
+#notif-close {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+
+  background: none;
+  border: none;
+  color: rgba(200, 30, 30, 0.9);
+  cursor: pointer;
 }

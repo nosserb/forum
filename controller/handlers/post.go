@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"forum/controller/logging"
 
@@ -259,7 +260,12 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 
 // Permet de répondre a un post uniquement si on est connecté
 // Insère le commentaire dans la DB
-func ReplyHandler(w http.ResponseWriter, r *http.Request) {
+func ReplyHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	sseClients map[int][]chan Notification,
+	sseMu *sync.RWMutex,
+) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"forum/controller/handlers"
 	"forum/controller/logging"
@@ -9,6 +10,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"forum/controller/cookies"
 	"forum/model/data"
@@ -37,6 +40,9 @@ func main() {
 	// Parse templates
 	templates := server.ParseTemplates("./view/assets/templates/*.html")
 
+	sseClients := make(map[int][]chan handlers.Notification, 1000)
+	sseMu := &sync.RWMutex{}
+
 	mux := http.NewServeMux()
 
 	fs := http.FileServer(http.Dir("./view/assets/static"))
@@ -54,11 +60,15 @@ func main() {
 		Username: "",
 	}
 
-	handlers.RegisterRoutes(mux, templates, db)
+	handlers.RegisterRoutes(mux, templates, db, sseClients, sseMu)
 
 	// dev/testing route
 	mux.HandleFunc("/dev", func(w http.ResponseWriter, r *http.Request) {
-		devHandler(w, r, db)
+		devHandler(w, r, db, sseClients, sseMu)
+	})
+
+	mux.HandleFunc("/dev/sendnotif", func(w http.ResponseWriter, r *http.Request) {
+		DevSendNotifHandler(w, r, db, sseClients, sseMu)
 	})
 
 	// cookie db init - temporary
@@ -85,12 +95,78 @@ func main() {
 	}
 }
 
-func devHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	w.Header().Set("Content-Type", "text/plain")
+func devHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, sseClients map[int][]chan handlers.Notification, sseMu *sync.RWMutex) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	html := `
+<html>
+<head>
+<title>Dev Debug</title>
+</head>
+<body>
+
+<h2>Envoyer une notification SSE</h2>
+
+<label>Receiver username: <input type="text" id="receiverUsername" value="testuser"></label><br>
+<label>Sender username: <input type="text" id="senderUsername" value="devuser"></label><br>
+
+<label>Type:
+<select id="type">
+<option value="debug">debug</option>
+<option value="like">like</option>
+<option value="dislike">dislike</option>
+<option value="comment">comment</option>
+<option value="message">message</option>
+</select>
+</label><br>
+
+<label>Subject Type:
+<select id="subjectType">
+<option value="user">user</option>
+<option value="post">post</option>
+<option value="comment">comment</option>
+</select>
+</label><br>
+
+<label>Subject ID: <input type="number" id="subjectID" value="1"></label><br>
+<label>Subject Label: <input type="text" id="subjectLabel" value="Test message"></label><br>
+
+<button onclick="sendNotif()">Envoyer</button>
+<pre id="resp"></pre>
+
+<script>
+function sendNotif() {
+    const payload = {
+        receiverUsername: document.getElementById("receiverUsername").value,
+        senderUsername: document.getElementById("senderUsername").value,
+        type: document.getElementById("type").value,
+        subjectType: document.getElementById("subjectType").value,
+        subjectID: parseInt(document.getElementById("subjectID").value),
+        subjectLabel: document.getElementById("subjectLabel").value
+    };
+
+    fetch("/dev/sendnotif", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.text())
+    .then(data => {
+        document.getElementById("resp").textContent = data;
+    });
+}
+</script>
+
+<hr>
+</body>
+</html>
+`
+
+	_, _ = w.Write([]byte(html))
 
 	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Write([]byte("Erreur: " + err.Error()))
 		return
 	}
 	defer rows.Close()
@@ -99,32 +175,30 @@ func devHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.Write([]byte("Erreur: " + err.Error()))
 			return
 		}
 		tables = append(tables, name)
 	}
 
 	for _, table := range tables {
-		fmt.Fprintf(w, "=== TABLE: %s ===\n", table)
+		w.Write([]byte("<h3>Table: " + table + "</h3>"))
 
-		query := fmt.Sprintf("SELECT * FROM %s;", table)
+		query := "SELECT * FROM " + table + ";"
 		tblRows, err := db.Query(query)
 		if err != nil {
-			fmt.Fprintf(w, "(error reading table: %v)\n\n", err)
+			w.Write([]byte("(erreur lecture table: " + err.Error() + ")<br>"))
 			continue
 		}
 
-		// Get column names
 		cols, err := tblRows.Columns()
 		if err != nil {
-			fmt.Fprintf(w, "(error reading columns: %v)\n\n", err)
+			w.Write([]byte("(erreur colonnes: " + err.Error() + ")<br>"))
 			tblRows.Close()
 			continue
 		}
-		fmt.Fprintf(w, "Columns: %s\n", strings.Join(cols, ", "))
+		w.Write([]byte("<b>Colonnes:</b> " + strings.Join(cols, ", ") + "<br>"))
 
-		// Make a slice of interface{} to scan each row dynamically
 		vals := make([]interface{}, len(cols))
 		ptrs := make([]interface{}, len(cols))
 		for i := range vals {
@@ -133,7 +207,7 @@ func devHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		for tblRows.Next() {
 			if err := tblRows.Scan(ptrs...); err != nil {
-				fmt.Fprintf(w, "(error scanning row: %v)\n", err)
+				w.Write([]byte("(erreur scan: " + err.Error() + ")<br>"))
 				continue
 			}
 
@@ -145,12 +219,53 @@ func devHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 					out = append(out, fmt.Sprintf("%v", v))
 				}
 			}
-			fmt.Fprintf(w, "%s\n", strings.Join(out, " | "))
+			w.Write([]byte(strings.Join(out, " | ") + "<br>"))
 		}
-
-		fmt.Fprintln(w)
 		tblRows.Close()
 	}
 
-	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusOK)
+	w.Write([]byte("</body></html>"))
+	fmt.Printf("DevHandler accessed: %v %v %v\n", r.RemoteAddr, r.Method, r.URL.Path)
+}
+
+func DevSendNotifHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, sseClients map[int][]chan handlers.Notification, sseMu *sync.RWMutex) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload struct {
+		ReceiverUsername string `json:"receiverUsername"`
+		SenderUsername   string `json:"senderUsername"`
+		Type             string `json:"type"`
+		SubjectType      string `json:"subjectType"`
+		SubjectID        int    `json:"subjectID"`
+		SubjectLabel     string `json:"subjectLabel"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	users, err := forumDB.FetchUsersBy(db, "username", payload.ReceiverUsername)
+	if err != nil || len(users) == 0 {
+		http.Error(w, "Receiver not found", http.StatusNotFound)
+		return
+	}
+
+	receiver := users[0]
+
+	notif := handlers.Notification{
+		ReceiverID:   receiver.ID,
+		SenderName:   payload.SenderUsername,
+		Type:         payload.Type,
+		SubjectType:  payload.SubjectType,
+		SubjectID:    payload.SubjectID,
+		SubjectLabel: payload.SubjectLabel,
+		CreatedAt:    time.Now(),
+	}
+
+	handlers.SendNotification(notif, sseClients, sseMu)
+	w.Write([]byte("ok"))
 }

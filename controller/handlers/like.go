@@ -5,13 +5,20 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"forum/controller/logging"
 	forumDB "forum/model/functions"
 )
 
 // LikeHandler gère les likes en base et met à jour le compteur dans la table posts
-func LikeHandler(w http.ResponseWriter, r *http.Request) {
+func LikeHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	sseClients map[int][]chan Notification,
+	sseMu *sync.RWMutex,
+) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -182,13 +189,62 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 				logging.Logger.Printf("Update comments likes error: %v", err)
 			}
 		}
+
+		var receiverID int
+		var subjectLabel string
+
+		if hasPost {
+			posts, err := forumDB.FetchPostsBy(db, "id", int(postID))
+			if err == nil && len(posts) > 0 {
+				receiverID = posts[0].AuthorID
+				subjectLabel = posts[0].Title
+			}
+		} else if hasComment {
+			comments, err := forumDB.FetchCommentsBy(db, "id", int(commentID))
+			if err == nil && len(comments) > 0 {
+				receiverID = comments[0].AuthorID
+				subjectLabel = comments[0].Content
+			}
+		}
+
+		if receiverID != 0 && receiverID != user.ID {
+			notif := Notification{
+				ReceiverID: receiverID,
+				SenderID:   user.ID,
+				SenderName: user.Username,
+				Type:       "like",
+				SubjectType: func() string {
+					if hasPost {
+						return "post"
+					} else {
+						return "comment"
+					}
+				}(),
+				SubjectID: func() int {
+					if hasPost {
+						return int(postID)
+					} else {
+						return int(commentID)
+					}
+				}(),
+				SubjectLabel: subjectLabel,
+				CreatedAt:    time.Now(),
+			}
+
+			SendNotification(notif, sseClients, sseMu)
+		}
 	}
 
 	writeCounts()
 }
 
 // DislikeHandler gère les dislikes en base et met à jour le compteur
-func DislikeHandler(w http.ResponseWriter, r *http.Request) {
+func DislikeHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	sseClients map[int][]chan Notification,
+	sseMu *sync.RWMutex,
+) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -358,6 +414,51 @@ func DislikeHandler(w http.ResponseWriter, r *http.Request) {
 				logging.Logger.Printf("Update comments dislikes error: %v", err)
 			}
 		}
+
+		var receiverID int
+		var subjectLabel string
+
+		if hasPost {
+			posts, err := forumDB.FetchPostsBy(db, "id", int(postID))
+			if err == nil && len(posts) > 0 {
+				receiverID = posts[0].AuthorID
+				subjectLabel = posts[0].Title
+			}
+		} else if hasComment {
+			comments, err := forumDB.FetchCommentsBy(db, "id", int(commentID))
+			if err == nil && len(comments) > 0 {
+				receiverID = comments[0].AuthorID
+				subjectLabel = comments[0].Content
+			}
+		}
+
+		if receiverID != 0 && receiverID != user.ID {
+			notif := Notification{
+				ReceiverID: receiverID,
+				SenderID:   user.ID,
+				SenderName: user.Username,
+				Type:       "dislike",
+				SubjectType: func() string {
+					if hasPost {
+						return "post"
+					} else {
+						return "comment"
+					}
+				}(),
+				SubjectID: func() int {
+					if hasPost {
+						return int(postID)
+					} else {
+						return int(commentID)
+					}
+				}(),
+				SubjectLabel: subjectLabel,
+				CreatedAt:    time.Now(),
+			}
+
+			SendNotification(notif, sseClients, sseMu)
+		}
+
 	}
 
 	writeCounts()
