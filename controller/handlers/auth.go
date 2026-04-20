@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"html/template"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -37,8 +36,6 @@ func SignupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates
 	gender := strings.TrimSpace(r.FormValue("gender"))
 	ageStr := strings.TrimSpace(r.FormValue("age"))
 	password := r.FormValue("password")
-
-	log.Printf("[SIGNUP] Attempt: Email=%s, Username=%s", email, username)
 
 	// should not happen but anyway
 	if email == "" || password == "" || username == "" || gender == "" || ageStr == "" {
@@ -74,8 +71,6 @@ func SignupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates
 		return
 	}
 
-	log.Printf("[SIGNUP] Account created: Username=%s", username)
-
 	// Init session ID cookie
 	err = cookies.WriteSessionCookie(w, r, userID)
 	if err != nil {
@@ -86,6 +81,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates
 
 	// Redirection vers le forum
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusSeeOther)
 }
 
 // Gère la connexion
@@ -102,8 +98,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates 
 
 	identifier := strings.TrimSpace(r.FormValue("email"))
 	password := r.FormValue("password")
-
-	log.Printf("[LOGIN] Attempt: Identifier=%s", identifier)
 
 	if identifier == "" || password == "" {
 		ErrorHandler(w, r, http.StatusBadRequest, "Email or nickname and password required")
@@ -135,8 +129,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates 
 		return
 	}
 
-	log.Printf("[LOGIN] Successful login: Username=%s", user.Username)
-
 	// Init session ID cookie
 	err = cookies.WriteSessionCookie(w, r, int64(user.ID))
 	if err != nil {
@@ -146,4 +138,5 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, templates 
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusSeeOther)
 }

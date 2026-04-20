@@ -69,4 +69,6 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		logging.Logger.Printf("Template execute error: %v", err)
 		return
 	}
+
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusOK)
 }

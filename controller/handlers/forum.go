@@ -30,7 +30,6 @@ func getUserFromCookie(r *http.Request) forumDB.User {
 
 // Déconnexion (supprime le cookie)
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	logging.Logger.Println("[LOGOUT] called")
 	err := cookies.EndSession(w, r)
 	if err != nil {
 		ErrorHandler(w, r, http.StatusInternalServerError, err.Error())

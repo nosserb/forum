@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
+	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -94,7 +97,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	logging.Logger.Printf("[POST] user=%s title=%q", user.Username, title)
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusSeeOther)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -251,9 +254,11 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 			ErrorHandler(w, r, http.StatusInternalServerError, "Error rendering JSON")
 			logging.Logger.Printf("JSON encode error: %v", err)
 		}
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusOK)
 		return
 	}
 
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusOK)
 	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
 }
 
@@ -299,5 +304,6 @@ func ReplyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusSeeOther)
 	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
 }

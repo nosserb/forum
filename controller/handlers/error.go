@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"forum/controller/logging"
 	"log"
 	"net/http"
 )
@@ -25,4 +26,6 @@ func ErrorHandler(w http.ResponseWriter, r *http.Request, statusCode int, messag
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, statusCode)
 }
