@@ -155,14 +155,29 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			found := false
+			latestComment := ""
+			latestCommentTime := post.CreatedAt
+			latestCommentLikes := 0
+			latestCommentDislikes := 0
 			for _, comment := range comments {
 				if comment.AuthorID == user.ID {
 					found = true
-					break
+					if latestComment == "" || comment.CreatedAt.After(latestCommentTime) {
+						latestComment = comment.Content
+						latestCommentTime = comment.CreatedAt
+						latestCommentLikes = comment.Likes
+						latestCommentDislikes = comment.Dislikes
+					}
 				}
 			}
 			if !found {
 				continue
+			}
+
+			if r.FormValue("profile") == "1" && latestComment != "" {
+				post.Content = latestComment
+				post.Likes = latestCommentLikes
+				post.Dislikes = latestCommentDislikes
 			}
 		}
 

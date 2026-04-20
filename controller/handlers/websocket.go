@@ -307,7 +307,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request, params []any) {
 						u.Username + "," +
 						u.FirstName + "," +
 						u.LastName + "," +
-						u.Email
+						u.Email + "," +
+						strconv.Itoa(u.Age) + "," +
+						u.Gender
 
 					in <- "0|0|" + time.Now().Format("2006-01-02 15:04:05") +
 						"|userinfo:" + userInfo
