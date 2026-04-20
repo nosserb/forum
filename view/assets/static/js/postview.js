@@ -51,8 +51,14 @@ function showPostDetail(postId, pushState) {
             }
             return response.json();
         })
-        .then(data => {
+        .then(data => {        
             detailView.innerHTML = renderPostDetail(data, postId);
+
+            if (data.post.imageid != 0) {
+                const imageId = data.post.imageid
+                addPostImage(imageId, postId) 
+            }
+
             const backBtn = document.getElementById('back-to-posts-btn');
             if (backBtn) {
                 backBtn.addEventListener('click', function() {
@@ -76,6 +82,23 @@ function showPostDetail(postId, pushState) {
                 });
             }
         });
+}
+
+function addPostImage(imageID, postID) {
+    if (!imageID || !postID) {
+        return
+    }
+
+    const postCard = document.getElementsByClassName('post-detail-card')[0]
+    const postActions = postCard.children[2]
+
+    const img = document.createElement('img')
+    img.src = `/images?id=${imageID}`
+    
+    // id for css
+    img.id = 'post-image'
+
+    postCard.insertBefore(img, postActions)
 }
 
 function showPostsList(pushState) {

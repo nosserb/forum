@@ -1887,3 +1887,40 @@ body {
 .back-btn:active {
     transform: translateY(0);
 }
+
+#post-image {
+    max-width: 60%;
+    max-height: 60%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    align-self: flex-start;
+}
+
+/* custom img input */
+
+input[type="file"] {
+  display: none;
+}
+
+.custom-file-upload {
+  border: 1px solid #ccc;
+  display: inline-block;
+  padding: 6px 12px;
+  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 20px;
+  border: 2px solid var(--border);
+  font-weight: 700;
+  color: #fff;
+  background: #99ffe4;
+
+  align-self: flex-start;
+}
+
+.post-form-btns {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+}

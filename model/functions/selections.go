@@ -141,7 +141,7 @@ func FetchPostsBy(db *sql.DB, field string, value any) ([]Post, error) {
 	}
 
 	query := `
-		SELECT p.id, p.author_id, p.title, p.content, p.likes, p.dislikes, p.created_at, u.username
+		SELECT p.id, p.author_id, p.title, p.content, p.likes, p.dislikes, p.created_at, u.username, p.image_id
 		FROM posts p
 		JOIN users u ON u.id = p.author_id
 		WHERE p.` + field + ` = ?
@@ -156,11 +156,23 @@ func FetchPostsBy(db *sql.DB, field string, value any) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		var p Post
-		if err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt, &p.AuthorUsername); err != nil {
+
+		// security for null imageID
+		var imageID sql.NullInt64
+
+		if err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Likes, &p.Dislikes, &p.CreatedAt, &p.AuthorUsername, &imageID); err != nil {
 			return nil, err
 		}
+
+		if imageID.Valid {
+			p.ImageID = int(imageID.Int64)
+		} else {
+			p.ImageID = 0
+		}
+
 		posts = append(posts, p)
 	}
+
 	return posts, nil
 }
 
@@ -480,4 +492,17 @@ func FetchOnlineUsers(db *sql.DB) ([]User, error) {
 		users = append(users, u)
 	}
 	return users, nil
+}
+
+func FetchImage(db *sql.DB, imageID int64) (Image, error) {
+	var img Image
+	err := db.QueryRow(`
+        SELECT id, post_id, name, type, data
+        FROM images
+        WHERE id = ?`, imageID).
+		Scan(&img.ID, &img.PostID, &img.Name, &img.Type, &img.Data)
+	if err != nil {
+		return img, err
+	}
+	return img, nil
 }

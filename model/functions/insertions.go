@@ -350,3 +350,13 @@ func InsertWorker(db *sql.DB, reqChan <-chan InsertRequest) {
 		}
 	}()
 }
+
+func InsertImage(db *sql.DB, postID int64, name string, imgType string, imageData []byte) (int64, error) {
+	res, err := db.Exec(`
+		INSERT INTO images (post_id, name, type, data)
+		VALUES (?, ?, ?, ?)`, postID, name, imgType, imageData)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}

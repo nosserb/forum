@@ -179,7 +179,16 @@
                             <form id="createPostForm" method="POST" action="/post">
                                 <input type="text" id="postTitle" name="title" placeholder="Post title..." maxlength="60" required>
                                 <textarea id="postContent" name="content" placeholder="Write your post..." maxlength="7500" required></textarea>
-                                <button type="submit" class="create-post-btn">POST</button>
+
+                                <div class="post-form-btns">
+                                    <input id="image-input" type="file" name="image" accept="image/png,image/jpeg,image/gif,image/webp">                                                                
+                                    <label for="image-input" class="custom-file-upload">Upload image</label>
+
+                                    <button type="submit" class="create-post-btn">POST</button>   
+                                </div>                             
+
+                                <span id="img-name"></span>
+                                <span id="img-error-msg"></span>
                             </form>
                         </div>
                         {{end}}

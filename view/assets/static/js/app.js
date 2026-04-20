@@ -103,5 +103,24 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // if size > 20mb, display error
+    const imageInput = document.getElementById('image-input')
+    if (imageInput != null) {
+        imageInput.onchange = function() {
+            const ImageName = document.getElementById('img-name')
+            ImageName.innerText = this.files[0].name
+
+            const ErrorMsg = document.getElementById('img-error-msg')
+            if (this.files[0].size > 20000000) {
+                ErrorMsg.textContent = 'File too big, try another one'
+                this.value = '';
+                ImageName.innerText = '';
+            } else {
+                ErrorMsg.textContent = ''
+            }
+        }
+    }
 });
+
 

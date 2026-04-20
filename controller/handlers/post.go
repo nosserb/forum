@@ -33,6 +33,7 @@ type Post struct {
 	Likes      int      `json:"likes"`
 	Dislikes   int      `json:"dislikes"`
 	Categories []string `json:"categories"`
+	ImageID    int      `json:"imageid"`
 }
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +78,42 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de la création du post")
 		logging.Logger.Printf("InsertPost error: %v", err)
 		return
+	}
+
+	// Insert image if present
+	readfile, fileHeader, err := r.FormFile("image")
+	if err == nil {
+		imageData, err := io.ReadAll(readfile)
+		if err != nil {
+			ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de la lecture de l'image")
+			logging.Logger.Printf("Read image error : %v", err)
+			return
+		}
+
+		acceptedImageTypes := []string{"image/png", "image/jpeg", "image/gif", "image/svg", "image/webp"}
+
+		imgType := http.DetectContentType(imageData)
+
+		if !slices.Contains(acceptedImageTypes, imgType) {
+			ErrorHandler(w, r, 500, "Unsupported image type")
+			return
+		}
+
+		imageID, err := forumDB.InsertImage(db, postID, fileHeader.Filename, imgType, imageData)
+		if err != nil {
+			ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de l'insertion de l'image dans la db")
+			logging.Logger.Printf("InsertImage error : %v", err)
+			return
+		}
+
+		_, err = db.Exec(`
+		UPDATE posts SET image_id = ? WHERE id = ?;
+		`, imageID, postID)
+		if err != nil {
+			ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors du lien post-image")
+			logging.Logger.Printf("Link image-post error : %v", err)
+			return
+		}
 	}
 
 	// Récupère les catégories sélectionnées (plusieurs valeurs possibles)
@@ -124,6 +161,7 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 	// Récupérer le post
 	posts, err := forumDB.FetchPostsBy(db, "id", postID)
 	if err != nil || len(posts) == 0 {
+		log.Println(err)
 		ErrorHandler(w, r, http.StatusNotFound, "Post not found")
 		logging.Logger.Printf("Post not found: %d", postID)
 		return
@@ -240,6 +278,7 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 			Dislikes:   post.Dislikes,
 			Categories: categories,
 			Replies:    replies,
+			ImageID:    post.ImageID,
 		},
 		LikedPosts:       likedPosts,
 		DislikedPosts:    dislikedPosts,
