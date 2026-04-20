@@ -84,7 +84,59 @@ func InsertPost(db *sql.DB, authorID int64, title, content string) (int64, error
 }
 
 func DeletePost(db *sql.DB, postID int64) (int64, error) {
-	res, err := db.Exec("DELETE FROM posts WHERE id = ?", postID)
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.Exec(`
+		DELETE FROM reactions
+		WHERE comment_id IN (
+			SELECT id FROM comments WHERE post_id = ?
+		)`, postID); err != nil {
+		return 0, err
+	}
+
+	if _, err = tx.Exec("DELETE FROM reactions WHERE post_id = ?", postID); err != nil {
+		return 0, err
+	}
+
+	if _, err = tx.Exec("DELETE FROM post_categories WHERE post_id = ?", postID); err != nil {
+		return 0, err
+	}
+
+	if _, err = tx.Exec("DELETE FROM comments WHERE post_id = ?", postID); err != nil {
+		return 0, err
+	}
+
+	res, err := tx.Exec("DELETE FROM posts WHERE id = ?", postID)
+	if err != nil {
+		return 0, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return affected, nil
+}
+
+func UpdatePost(db *sql.DB, postID int64, title, content string) (int64, error) {
+	res, err := db.Exec(`
+		UPDATE posts
+		SET title = ?, content = ?
+		WHERE id = ?`, title, content, postID)
 	if err != nil {
 		return 0, err
 	}
@@ -102,7 +154,43 @@ func InsertComment(db *sql.DB, postID, authorID int64, content string) (int64, e
 }
 
 func DeleteComment(db *sql.DB, commentID int64) (int64, error) {
-	res, err := db.Exec("DELETE FROM comments WHERE id = ?", commentID)
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.Exec("DELETE FROM reactions WHERE comment_id = ?", commentID); err != nil {
+		return 0, err
+	}
+
+	res, err := tx.Exec("DELETE FROM comments WHERE id = ?", commentID)
+	if err != nil {
+		return 0, err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return affected, nil
+}
+
+func UpdateComment(db *sql.DB, commentID int64, content string) (int64, error) {
+	res, err := db.Exec(`
+		UPDATE comments
+		SET content = ?
+		WHERE id = ?`, content, commentID)
 	if err != nil {
 		return 0, err
 	}

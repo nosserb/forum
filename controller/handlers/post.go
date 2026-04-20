@@ -39,6 +39,15 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	switch r.FormValue("action") {
+	case "delete":
+		DeletePostHandler(w, r)
+		return
+	case "edit":
+		EditPostHandler(w, r)
+		return
+	}
+
 	user := getUserFromCookie(r)
 	if user.Username == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -52,19 +61,19 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// return error if empty title/content
 	if trimmedContent == "" || trimmedTitle == "" {
-		ErrorHandler(w, r, http.StatusBadRequest, "Titre ou contenu du post vide")
+		ErrorHandler(w, r, http.StatusBadRequest, "Post title or content cannot be empty")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
 
 	if len(title) > 100 {
-		ErrorHandler(w, r, http.StatusBadRequest, "Le titre doit faire au maximum 100 caractères")
+		ErrorHandler(w, r, http.StatusBadRequest, "The title must be 100 characters or fewer")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
 
 	if len(content) > 7500 {
-		ErrorHandler(w, r, http.StatusBadRequest, "Le contenu doit faire au maximum 7500 caractères")
+		ErrorHandler(w, r, http.StatusBadRequest, "The content must be 7500 characters or fewer")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
@@ -72,7 +81,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	// Insert en DB
 	postID, err := forumDB.InsertPost(db, int64(user.ID), title, content)
 	if err != nil {
-		ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de la création du post")
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while creating the post")
 		logging.Logger.Printf("InsertPost error: %v", err)
 		return
 	}
@@ -258,6 +267,141 @@ func ViewPostHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
 }
 
+func DeletePostHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := getUserFromCookie(r)
+	if user.Username == "" {
+		ErrorHandler(w, r, http.StatusUnauthorized, "You must be logged in to delete a post")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusUnauthorized)
+		return
+	}
+
+	postID, err := strconv.Atoi(r.FormValue("post_id"))
+	if err != nil || postID <= 0 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Invalid post ID")
+		logging.Logger.Printf("invalid post id for deletion: %q", r.FormValue("post_id"))
+		return
+	}
+
+	posts, err := forumDB.FetchPostsBy(db, "id", postID)
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while retrieving the post")
+		logging.Logger.Printf("FetchPostsBy error during deletion: %v", err)
+		return
+	}
+
+	if len(posts) == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Post not found")
+		logging.Logger.Printf("post not found for deletion: %d", postID)
+		return
+	}
+
+	if posts[0].AuthorID != user.ID {
+		ErrorHandler(w, r, http.StatusForbidden, "You can only delete your own posts")
+		logging.Logger.Printf("forbidden post deletion attempt user=%d post=%d author=%d", user.ID, postID, posts[0].AuthorID)
+		return
+	}
+
+	deleted, err := forumDB.DeletePost(db, int64(postID))
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while deleting the post")
+		logging.Logger.Printf("DeletePost error: %v", err)
+		return
+	}
+
+	if deleted == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Post not found")
+		logging.Logger.Printf("no rows deleted for post %d", postID)
+		return
+	}
+
+	logging.Logger.Printf("[DELETE POST] user=%s post=%d", user.Username, postID)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func EditPostHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := getUserFromCookie(r)
+	if user.Username == "" {
+		ErrorHandler(w, r, http.StatusUnauthorized, "You must be logged in to edit a post")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusUnauthorized)
+		return
+	}
+
+	postID, err := strconv.Atoi(r.FormValue("post_id"))
+	if err != nil || postID <= 0 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Invalid post ID")
+		logging.Logger.Printf("invalid post id for edit: %q", r.FormValue("post_id"))
+		return
+	}
+
+	posts, err := forumDB.FetchPostsBy(db, "id", postID)
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while retrieving the post")
+		logging.Logger.Printf("FetchPostsBy error during edit: %v", err)
+		return
+	}
+
+	if len(posts) == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Post not found")
+		logging.Logger.Printf("post not found for edit: %d", postID)
+		return
+	}
+
+	if posts[0].AuthorID != user.ID {
+		ErrorHandler(w, r, http.StatusForbidden, "You can only edit your own posts")
+		logging.Logger.Printf("forbidden post edit attempt user=%d post=%d author=%d", user.ID, postID, posts[0].AuthorID)
+		return
+	}
+
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+	trimmedTitle := strings.TrimSpace(title)
+	trimmedContent := strings.TrimSpace(content)
+
+	if trimmedTitle == "" || trimmedContent == "" {
+		ErrorHandler(w, r, http.StatusBadRequest, "Post title or content cannot be empty")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(title) > 100 {
+		ErrorHandler(w, r, http.StatusBadRequest, "The title must be 100 characters or fewer")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(content) > 7500 {
+		ErrorHandler(w, r, http.StatusBadRequest, "The content must be 7500 characters or fewer")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	updated, err := forumDB.UpdatePost(db, int64(postID), title, content)
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while editing the post")
+		logging.Logger.Printf("UpdatePost error: %v", err)
+		return
+	}
+
+	if updated == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Post not found")
+		logging.Logger.Printf("no rows updated for post %d", postID)
+		return
+	}
+
+	logging.Logger.Printf("[EDIT POST] user=%s post=%d", user.Username, postID)
+	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
+}
+
 // Permet de répondre a un post uniquement si on est connecté
 // Insère le commentaire dans la DB
 func ReplyHandler(
@@ -268,6 +412,15 @@ func ReplyHandler(
 ) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	switch r.FormValue("action") {
+	case "edit":
+		EditCommentHandler(w, r)
+		return
+	case "delete":
+		DeleteCommentHandler(w, r)
 		return
 	}
 
@@ -288,7 +441,7 @@ func ReplyHandler(
 
 	content := r.FormValue("content")
 	if strings.TrimSpace(content) == "" {
-		ErrorHandler(w, r, http.StatusBadRequest, "Contenu du commentaire vide")
+		ErrorHandler(w, r, http.StatusBadRequest, "Comment content cannot be empty")
 		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
 		return
 	}
@@ -300,10 +453,162 @@ func ReplyHandler(
 
 	_, err = forumDB.InsertComment(db, int64(postID), int64(user.ID), content)
 	if err != nil {
-		ErrorHandler(w, r, http.StatusInternalServerError, "Erreur lors de la publication du commentaire")
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while publishing the comment")
 		logging.Logger.Printf("InsertComment error: %v", err)
 		return
 	}
 
+	var receiverID int
+	var subjectLabel string
+
+	posts, err := forumDB.FetchPostsBy(db, "id", postID)
+	if err == nil && len(posts) > 0 {
+		receiverID = posts[0].AuthorID
+		subjectLabel = posts[0].Title
+	}
+
+	if receiverID != 0 && receiverID != user.ID {
+		notif := Notification{
+			ReceiverID:   receiverID,
+			SenderID:     user.ID,
+			SenderName:   user.Username,
+			Type:         "comment",
+			SubjectType:  "post",
+			SubjectID:    postID,
+			SubjectLabel: subjectLabel,
+			CreatedAt:    time.Now(),
+		}
+
+		SendNotification(notif, sseClients, sseMu)
+	}
+
 	http.Redirect(w, r, "/?post="+strconv.Itoa(postID), http.StatusSeeOther)
+}
+
+func EditCommentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := getUserFromCookie(r)
+	if user.Username == "" {
+		ErrorHandler(w, r, http.StatusUnauthorized, "You must be logged in to edit a comment")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusUnauthorized)
+		return
+	}
+
+	commentID, err := strconv.Atoi(r.FormValue("comment_id"))
+	if err != nil || commentID <= 0 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Invalid comment ID")
+		logging.Logger.Printf("invalid comment id for edit: %q", r.FormValue("comment_id"))
+		return
+	}
+
+	comments, err := forumDB.FetchCommentsBy(db, "id", commentID)
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while retrieving the comment")
+		logging.Logger.Printf("FetchCommentsBy error during edit: %v", err)
+		return
+	}
+
+	if len(comments) == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Comment not found")
+		logging.Logger.Printf("comment not found for edit: %d", commentID)
+		return
+	}
+
+	comment := comments[0]
+	if comment.AuthorID != user.ID {
+		ErrorHandler(w, r, http.StatusForbidden, "You can only edit your own comments")
+		logging.Logger.Printf("forbidden comment edit attempt user=%d comment=%d author=%d", user.ID, commentID, comment.AuthorID)
+		return
+	}
+
+	content := r.FormValue("content")
+	trimmedContent := strings.TrimSpace(content)
+	if trimmedContent == "" {
+		ErrorHandler(w, r, http.StatusBadRequest, "Comment content cannot be empty")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	if len(content) > 7500 {
+		ErrorHandler(w, r, http.StatusBadRequest, "The content must be 7500 characters or fewer")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusBadRequest)
+		return
+	}
+
+	updated, err := forumDB.UpdateComment(db, int64(commentID), content)
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while editing the comment")
+		logging.Logger.Printf("UpdateComment error: %v", err)
+		return
+	}
+
+	if updated == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Comment not found")
+		logging.Logger.Printf("no rows updated for comment %d", commentID)
+		return
+	}
+
+	logging.Logger.Printf("[EDIT COMMENT] user=%s comment=%d", user.Username, commentID)
+	http.Redirect(w, r, "/?post="+strconv.Itoa(comment.PostID), http.StatusSeeOther)
+}
+
+func DeleteCommentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := getUserFromCookie(r)
+	if user.Username == "" {
+		ErrorHandler(w, r, http.StatusUnauthorized, "You must be logged in to delete a comment")
+		logging.Logger.Printf("%v \"%v %v %v\" %v", r.RemoteAddr, r.Method, r.URL.Path, r.Proto, http.StatusUnauthorized)
+		return
+	}
+
+	commentID, err := strconv.Atoi(r.FormValue("comment_id"))
+	if err != nil || commentID <= 0 {
+		ErrorHandler(w, r, http.StatusBadRequest, "Invalid comment ID")
+		logging.Logger.Printf("invalid comment id for deletion: %q", r.FormValue("comment_id"))
+		return
+	}
+
+	comments, err := forumDB.FetchCommentsBy(db, "id", commentID)
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while retrieving the comment")
+		logging.Logger.Printf("FetchCommentsBy error during deletion: %v", err)
+		return
+	}
+
+	if len(comments) == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Comment not found")
+		logging.Logger.Printf("comment not found for deletion: %d", commentID)
+		return
+	}
+
+	comment := comments[0]
+	if comment.AuthorID != user.ID {
+		ErrorHandler(w, r, http.StatusForbidden, "You can only delete your own comments")
+		logging.Logger.Printf("forbidden comment deletion attempt user=%d comment=%d author=%d", user.ID, commentID, comment.AuthorID)
+		return
+	}
+
+	deleted, err := forumDB.DeleteComment(db, int64(commentID))
+	if err != nil {
+		ErrorHandler(w, r, http.StatusInternalServerError, "An error occurred while deleting the comment")
+		logging.Logger.Printf("DeleteComment error: %v", err)
+		return
+	}
+
+	if deleted == 0 {
+		ErrorHandler(w, r, http.StatusNotFound, "Comment not found")
+		logging.Logger.Printf("no rows deleted for comment %d", commentID)
+		return
+	}
+
+	logging.Logger.Printf("[DELETE COMMENT] user=%s comment=%d", user.Username, commentID)
+	http.Redirect(w, r, "/?post="+strconv.Itoa(comment.PostID), http.StatusSeeOther)
 }
