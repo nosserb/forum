@@ -76,6 +76,7 @@ forum/
 <br>
 
 ---
+
 > [!INFO] CREDITS
 This repo is the open-source version of a common curriculum project from **Zone01** called `forum`, reinforced by a more advanced `real time forum` project.
 <br>
