@@ -1,126 +1,315 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Real-Time Forum</title>
-    <link rel="stylesheet" href="/statics/forum.css?v=2">
-    <link rel="icon" type="image/png" href="/statics/favicon/favicon.png">
+    <link rel="stylesheet" href="/statics/forum.css?v=2" />
+    <link rel="icon" type="image/png" href="/statics/favicon/favicon.png" />
     <script>
-        window.USER_ID = "{{.UserID}}";
-        window.SESSION_ID = "{{.SessionID}}";
+      window.USER_ID = "{{.UserID}}";
+      window.SESSION_ID = "{{.SessionID}}";
     </script>
     <script src="/statics/js/app.js" defer></script>
     <script src="/statics/js/likecolor.js" defer></script>
     <script src="/statics/js/filter.js" defer></script>
     <script src="/statics/js/postview.js" defer></script>
     <script src="/statics/js/online-users.js" defer></script>
-</head>
-<body>
+  </head>
+  <!-- div de la boite a notifications -->
+  <div id="notif-box">
+    <span id="notif-text"></span>
+    <button id="notif-close">✕</button>
+  </div>
+  <script src="/statics/js/sse.js"></script>
+  <!-- ^ fin de modification ^ -->
+  <body>
     <div class="container">
-        <!-- Chat Modal -->
-        <div id="chatModal" class="chat-modal" aria-hidden="true">
-            <div class="chat-modal-content" role="dialog" aria-modal="true" aria-labelledby="chatModalTitle">
-                <div class="chat-modal-header">
-                    <div class="chat-modal-title" id="chatModalTitle">Chat</div>
-                    <button class="chat-close-btn" type="button" aria-label="Close chat" onclick="closeChatModal()">×</button>
-                </div>
-                <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
-                <form id="chatForm" class="chat-form" autocomplete="off">
-                    <input id="chatInput" type="text" placeholder="Votre message..." required />
-                    <button class="chat-send-btn" type="submit">ENVOYER</button>
-                </form>
-            </div>
+      <!-- Chat Modal -->
+      <div id="chatModal" class="chat-modal" aria-hidden="true">
+        <div
+          class="chat-modal-content"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="chatModalTitle"
+        >
+          <div class="chat-modal-header">
+            <div class="chat-modal-title" id="chatModalTitle">Chat</div>
+            <button
+              class="chat-close-btn"
+              type="button"
+              aria-label="Close chat"
+              onclick="closeChatModal()"
+            >
+              
+            </button>
+          </div>
+          <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+          <form id="chatForm" class="chat-form" autocomplete="off">
+            <input
+              id="chatInput"
+              type="text"
+              placeholder="Votre message..."
+              required
+            />
+            <button class="chat-send-btn" type="submit">SEND</button>
+          </form>
         </div>
+      </div>
 
-        <!-- Authentication Modal -->
-        <div id="authModal" class="auth-modal">
-            <div class="auth-modal-content">
-                <div class="auth-modal-buttons">
-                    <button class="auth-modal-btn active" id="loginTabBtn" onclick="switchTab('login')">LOG IN</button>
-                    <button class="auth-modal-btn" id="signupTabBtn" onclick="switchTab('signup')">SIGN UP</button>
+      <!-- Authentication Modal -->
+      <div id="authModal" class="auth-modal">
+        <div class="auth-modal-content">
+          <div class="auth-modal-buttons">
+            <button
+              class="auth-modal-btn active"
+              id="loginTabBtn"
+              onclick="switchTab('login')"
+            >
+              LOG IN
+            </button>
+            <button
+              class="auth-modal-btn"
+              id="signupTabBtn"
+              onclick="switchTab('signup')"
+            >
+              SIGN UP
+            </button>
+          </div>
+
+          <!-- Login Form -->
+          <form
+            id="loginForm"
+            class="auth-form active"
+            method="POST"
+            action="/login"
+          >
+            <h2 class="auth-form-title">Welcome Back</h2>
+            <p class="auth-form-subtitle">
+              Enter your credentials to continue.
+            </p>
+
+            <div class="form-group">
+              <label for="loginEmail">Email or Nickname</label>
+              <input
+                type="text"
+                id="loginEmail"
+                name="email"
+                placeholder="Enter your email or nickname"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="loginPassword">Password</label>
+              <input
+                type="password"
+                id="loginPassword"
+                name="password"
+                placeholder="Enter your password"
+                minlength="8"
+                maxlength="25"
+                required
+              />
+            </div>
+
+            <button type="submit" class="auth-submit-btn">LOG IN</button>
+          </form>
+
+          <!-- Signup Form -->
+          <form
+            id="signupForm"
+            class="auth-form"
+            method="POST"
+            action="/signup"
+          >
+            <h2 class="auth-form-title">Welcome</h2>
+            <p class="auth-form-subtitle">Create an account to participate.</p>
+
+            <div class="signup-grid">
+              <div class="signup-column">
+                <div class="form-group">
+                  <label for="signupEmail">Email</label>
+                  <input
+                    type="email"
+                    id="signupEmail"
+                    name="email"
+                    placeholder="Enter your email"
+                    required
+                  />
                 </div>
 
-                <!-- Login Form -->
-                <form id="loginForm" class="auth-form active" method="POST" action="/login">
-                    <h2 class="auth-form-title">Welcome Back</h2>
-                    <p class="auth-form-subtitle">Enter your credentials to continue.</p>
-                    
-                    <div class="form-group">
-                        <label for="loginEmail">Email or Nickname</label>
-                        <input type="text" id="loginEmail" name="email" placeholder="Enter your email or nickname" required>
-                    </div>
+                <div class="form-group">
+                  <label for="signupFirstName">First Name</label>
+                  <input
+                    type="text"
+                    id="signupFirstName"
+                    name="firstName"
+                    placeholder="Enter your first name"
+                    required
+                  />
+                </div>
 
-                    <div class="form-group">
-                        <label for="loginPassword">Password</label>
-                        <input type="password" id="loginPassword" name="password" placeholder="Enter your password" minlength="8" maxlength="25" required>
-                    </div>
+                <div class="form-group">
+                  <label for="signupLastName">Last Name</label>
+                  <input
+                    type="text"
+                    id="signupLastName"
+                    name="lastName"
+                    placeholder="Enter your last name"
+                    required
+                  />
+                </div>
 
-                    <button type="submit" class="auth-submit-btn">LOG IN</button>
-                </form>
+                <div class="form-group">
+                  <label for="signupUsername">Nickname</label>
+                  <input
+                    type="text"
+                    id="signupUsername"
+                    name="username"
+                    placeholder="Choose your nickname"
+                    minlength="4"
+                    maxlength="20"
+                    required
+                  />
+                </div>
+              </div>
 
-                <!-- Signup Form -->
-                <form id="signupForm" class="auth-form" method="POST" action="/signup">
-                    <h2 class="auth-form-title">Welcome</h2>
-                    <p class="auth-form-subtitle">Create an account to participate.</p>
+              <div class="signup-column">
+                <div class="form-group">
+                  <label for="signupAge">Age</label>
+                  <input
+                    type="number"
+                    id="signupAge"
+                    name="age"
+                    min="13"
+                    max="120"
+                    placeholder="Enter your age"
+                    required
+                  />
+                </div>
 
-                    <div class="signup-grid">
-                        <div class="signup-column">
-                            <div class="form-group">
-                                <label for="signupEmail">Email</label>
-                                <input type="email" id="signupEmail" name="email" placeholder="Enter your email" required>
-                            </div>
+                <div class="form-group">
+                  <label class="gender-label">Gender</label>
+                  <div class="checkbox-group">
+                    <label class="checkbox-item">
+                      <input
+                        type="radio"
+                        name="gender"
+                        value="female"
+                        required
+                      />
+                      <span>Female</span>
+                    </label>
+                    <label class="checkbox-item">
+                      <input type="radio" name="gender" value="male" />
+                      <span>Male</span>
+                    </label>
+                    <label class="checkbox-item">
+                      <input type="radio" name="gender" value="other" />
+                      <span>Other</span>
+                    </label>
+                  </div>
+                </div>
 
-                            <div class="form-group">
-                                <label for="signupFirstName">First Name</label>
-                                <input type="text" id="signupFirstName" name="firstName" placeholder="Enter your first name" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="signupLastName">Last Name</label>
-                                <input type="text" id="signupLastName" name="lastName" placeholder="Enter your last name" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="signupUsername">Nickname</label>
-                                <input type="text" id="signupUsername" name="username" placeholder="Choose your nickname" minlength="4" maxlength="20" required>
-                            </div>
-                        </div>
-
-                        <div class="signup-column">
-                            <div class="form-group">
-                                <label for="signupAge">Age</label>
-                                <input type="number" id="signupAge" name="age" min="13" max="120" placeholder="Enter your age" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="gender-label">Gender</label>
-                                <div class="checkbox-group">
-                                    <label class="checkbox-item">
-                                        <input type="radio" name="gender" value="female" required>
-                                        <span>Female</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="radio" name="gender" value="male">
-                                        <span>Male</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="radio" name="gender" value="other">
-                                        <span>Other</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="signupPassword">Password</label>
-                                <input type="password" id="signupPassword" name="password" placeholder="Create a password" minlength="8" maxlength="25" required>
-                            </div>
-                        </div>
-                    </div>
+                <div class="form-group">
+                  <label for="signupPassword">Password</label>
+                  <input
+                    type="password"
+                    id="signupPassword"
+                    name="password"
+                    placeholder="Create a password"
+                    minlength="8"
+                    maxlength="25"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
 
                     <button type="submit" class="auth-submit-btn">SIGN UP</button>
                 </form>
             </div>
+        </div>
+
+        <!-- Delete Post Confirmation Modal -->
+        <div id="deletePostModal" class="delete-post-modal" aria-hidden="true">
+            <div class="delete-post-modal-content" role="dialog" aria-modal="true" aria-labelledby="deletePostModalTitle">
+                <div class="delete-post-modal-icon" aria-hidden="true">!</div>
+                <h2 id="deletePostModalTitle" class="delete-post-modal-title">Delete this post ?</h2>
+                <p class="delete-post-modal-message">This action is permanent and will also delete associated comments.</p>
+                <p id="deletePostModalPostTitle" class="delete-post-modal-post-title"></p>
+                <div class="delete-post-modal-actions">
+                    <button type="button" class="delete-post-modal-btn delete-post-modal-cancel" id="deletePostCancelBtn">Cancel</button>
+                    <button type="button" class="delete-post-modal-btn delete-post-modal-confirm" id="deletePostConfirmBtn">Yes, delete</button>
+                </div>
+            </div>
+        </div>
+
+            <!-- Delete Comment Confirmation Modal -->
+            <div id="deleteCommentModal" class="delete-post-modal" aria-hidden="true">
+              <div class="delete-post-modal-content delete-comment-modal-content" role="dialog" aria-modal="true" aria-labelledby="deleteCommentModalTitle">
+                <div class="delete-post-modal-icon" aria-hidden="true">!</div>
+                <h2 id="deleteCommentModalTitle" class="delete-post-modal-title">Delete this comment ?</h2>
+                <p class="delete-post-modal-message">This action is permanent.</p>
+                <p id="deleteCommentModalCommentContent" class="delete-post-modal-post-title"></p>
+                <div class="delete-post-modal-actions">
+                  <button type="button" class="delete-post-modal-btn delete-post-modal-cancel" id="deleteCommentCancelBtn">Cancel</button>
+                  <button type="button" class="delete-post-modal-btn delete-post-modal-confirm" id="deleteCommentConfirmBtn">Yes, delete</button>
+                </div>
+              </div>
+            </div>
+
+        <!-- Edit Post Modal -->
+        <div id="editPostModal" class="edit-post-modal" aria-hidden="true">
+          <div class="edit-post-modal-content" role="dialog" aria-modal="true" aria-labelledby="editPostModalTitle">
+            <div class="edit-post-modal-header">
+              <h2 id="editPostModalTitle" class="edit-post-modal-title">Edit post</h2>
+              <button type="button" class="edit-post-close-btn" id="editPostCloseBtn" aria-label="Close edit post modal">×</button>
+            </div>
+            <form id="editPostForm" method="POST" action="/post" class="edit-post-form">
+              <input type="hidden" name="action" value="edit">
+              <input type="hidden" name="post_id" id="editPostIdInput">
+
+              <label for="editPostTitleInput" class="edit-post-label">Title</label>
+              <input type="text" id="editPostTitleInput" name="title" maxlength="100" required>
+
+              <label for="editPostContentInput" class="edit-post-label">Content</label>
+              <textarea id="editPostContentInput" name="content" rows="7" maxlength="7500" required></textarea>
+
+              <p id="editPostError" class="edit-post-error" aria-live="polite"></p>
+
+              <div class="edit-post-modal-actions">
+                <button type="button" class="edit-post-btn edit-post-cancel" id="editPostCancelBtn">Cancel</button>
+                <button type="submit" class="edit-post-btn edit-post-save">Save changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Edit Comment Modal -->
+        <div id="editCommentModal" class="edit-post-modal" aria-hidden="true">
+          <div class="edit-post-modal-content" role="dialog" aria-modal="true" aria-labelledby="editCommentModalTitle">
+            <div class="edit-post-modal-header">
+              <h2 id="editCommentModalTitle" class="edit-post-modal-title">Edit comment</h2>
+              <button type="button" class="edit-post-close-btn" id="editCommentCloseBtn" aria-label="Close edit comment modal">×</button>
+            </div>
+            <form id="editCommentForm" method="POST" action="/reply" class="edit-post-form">
+              <input type="hidden" name="action" value="edit">
+              <input type="hidden" name="comment_id" id="editCommentIdInput">
+              <input type="hidden" name="post_id" id="editCommentPostIdInput">
+
+              <label for="editCommentContentInput" class="edit-post-label">Content</label>
+              <textarea id="editCommentContentInput" name="content" rows="7" maxlength="7500" required></textarea>
+
+              <p id="editCommentError" class="edit-post-error" aria-live="polite"></p>
+
+              <div class="edit-post-modal-actions">
+                <button type="button" class="edit-post-btn edit-post-cancel" id="editCommentCancelBtn">Cancel</button>
+                <button type="submit" class="edit-post-btn edit-post-save">Save changes</button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <!-- Header -->
@@ -128,12 +317,21 @@
             {{if .Username}}
             <div class="header-left">
                 <button class="header-btn" onclick="logout()">LOGOUT</button>
-                <span class="welcome-text">Welcome <strong>{{.Username}}</strong></span>
             </div>
             <div class="header-center">
                 <h1 class="title">REAL-TIME<br><span class="forum-title">F<img src="/statics/image/globe.png" alt="O" class="globe-icon">RUM</span></h1>
             </div>
             <div class="header-right">
+                <span class="welcome-text"><strong>{{.Username}}</strong></span>
+                <button
+                    id="profileToggle"
+                    class="profile-btn"
+                    type="button"
+                    aria-label="Open profile"
+                    data-username="{{.Username}}"
+                    onclick="toggleProfileModal(event)">
+                    <img src="/statics/image/profil.png" alt="Profile" class="profile-avatar">
+                </button>
             </div>
             {{else}}
             <div class="header-left">
@@ -148,20 +346,84 @@
             {{end}}
         </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <!-- Online Users list -->
-                <section class="online-section">
-                    <div class="users-header">
-                        <h2 class="section-title">ONLINE</h2>
+        {{if .Username}}
+        <div id="profileModal" class="profile-modal" aria-hidden="true">
+            <div class="profile-modal-content" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+                <div class="profile-modal-header">
+                    <h2 id="profileModalTitle">User Profile</h2>
+                    <button class="profile-close-btn" type="button" aria-label="Close profile" onclick="closeProfileModal()">×</button>
+                </div>
+                <div class="profile-modal-body">
+                    <div class="profile-info-row">
+                        <p><strong>Username:</strong> <span id="profileInfoUsername">-</span></p>
+                        <p><strong>Email:</strong> <span id="profileInfoEmail">-</span></p>
                     </div>
-                    <div class="users-list">
-                        {{range .OnlineUsers}}
-                        <div class="user-item">{{.Username}}</div>
-                        {{end}}
+                    <div class="profile-info-row">
+                        <p><strong>Last name:</strong> <span id="profileInfoLastName">-</span></p>
+                        <p><strong>First name:</strong> <span id="profileInfoFirstName">-</span></p>
+                        <p><strong>Age:</strong> <span id="profileInfoAge">-</span></p>
                     </div>
-                </section>
+
+                    <div class="profile-post-board" aria-label="Profile posts overview">
+                        <section class="profile-post-column profile-post-column-created">
+                            <div class="profile-post-column-header">
+                                <h3>Created</h3>
+                                <span id="profileCreatedCount">0</span>
+                            </div>
+                            <div id="profileCreatedPosts" class="profile-post-column-body">
+                                <div class="profile-post-empty">Loading...</div>
+                            </div>
+                        </section>
+
+                        <section class="profile-post-column profile-post-column-commented">
+                            <div class="profile-post-column-header">
+                                <h3>Comment</h3>
+                                <span id="profileCommentedCount">0</span>
+                            </div>
+                            <div id="profileCommentedPosts" class="profile-post-column-body">
+                                <div class="profile-post-empty">Loading...</div>
+                            </div>
+                        </section>
+
+                        <section class="profile-post-column profile-post-column-liked">
+                            <div class="profile-post-column-header">
+                                <h3>Liked</h3>
+                                <span id="profileLikedCount">0</span>
+                            </div>
+                            <div id="profileLikedPosts" class="profile-post-column-body">
+                                <div class="profile-post-empty">Loading...</div>
+                            </div>
+                        </section>
+
+                        <section class="profile-post-column profile-post-column-disliked">
+                            <div class="profile-post-column-header">
+                                <h3>Disliked</h3>
+                                <span id="profileDislikedCount">0</span>
+                            </div>
+                            <div id="profileDislikedPosts" class="profile-post-column-body">
+                                <div class="profile-post-empty">Loading...</div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{end}}
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <div class="content-wrapper">
+          <!-- Online Users list -->
+          <section class="online-section">
+            <div class="users-header">
+              <h2 class="section-title">ONLINE</h2>
+            </div>
+            <div class="users-list">
+              {{range .OnlineUsers}}
+              <div class="user-item">{{.Username}}</div>
+              {{end}}
+            </div>
+          </section>
 
                 <!-- Posts Section -->
                 <section class="posts-section">
@@ -204,6 +466,28 @@
                                     </div>
                                     <div class="post-header-right">
                                         <div class="post-date">{{ .CreatedAt.Format "2006-01-02 15:04" }}</div>
+                                        {{if and $.Username (eq $.UserID .AuthorID)}}
+                                        <details class="post-options">
+                                            <summary class="post-options-trigger" aria-label="Options du post">
+                                                <img src="/statics/image/engrenage.png" alt="Options" class="post-options-icon">
+                                            </summary>
+                                            <div class="post-options-menu">
+                                                <form method="POST" action="/post" class="js-delete-post-form" data-post-title="{{ .Title }}">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="post_id" value="{{ .ID }}">
+                                                    <button type="submit" class="post-option post-option-danger">Delete</button>
+                                                </form>
+                                                <button
+                                                    type="button"
+                                                    class="post-option js-edit-post-btn"
+                                                    data-post-id="{{ .ID }}"
+                                                    data-post-title="{{ .Title }}"
+                                                    data-post-content="{{ .Content }}">
+                                                    Edit
+                                                </button>
+                                            </div>
+                                        </details>
+                                        {{end}}
                                     </div>
                                 </div>
                                 {{ with index $.PostCategories .ID }}
@@ -215,38 +499,59 @@
                                     <p>{{ .Content }}</p>
                                 </div>
 
-                                <div class="post-actions">
-                                    {{ if $.Username }}
-                                    <form method="POST" action="/like" style="display:inline;">
-                                        <input type="hidden" name="post_id" value="{{ .ID }}">
-                                        <button type="submit" class="like-btn{{ if index $.Liked .ID }} active{{ end }}">
-                                            <img src="/statics/image/like.png" alt="Like" />
-                                            <span class="count">{{ .Likes }}</span>
-                                        </button>
-                                    </form>
+                  <div class="post-actions">
+                    {{ if $.Username }}
+                    <form method="POST" action="/like" style="display: inline">
+                      <input type="hidden" name="post_id" value="{{ .ID }}" />
+                      <button
+                        type="submit"
+                        class="like-btn{{ if index $.Liked .ID }} active{{ end }}"
+                      >
+                        <img src="/statics/image/like.png" alt="Like" />
+                        <span class="count">{{ .Likes }}</span>
+                      </button>
+                    </form>
 
-                                    <form method="POST" action="/dislike" style="display:inline;">
-                                        <input type="hidden" name="post_id" value="{{ .ID }}">
-                                        <button type="submit" class="dislike-btn{{ if index $.Disliked .ID }} active{{ end }}">
-                                            <img src="/statics/image/dislike.png" alt="Dislike" />
-                                            <span class="count">{{ .Dislikes }}</span>
-                                        </button>
-                                    </form>
-                                    {{ else }}
-                                    <span class="disabled-like"><img src="/statics/image/like.png" alt="Like" /> <span class="count">{{ .Likes }}</span></span>
-                                    <span class="disabled-dislike"><img src="/statics/image/dislike.png" alt="Dislike" /> <span class="count">{{ .Dislikes }}</span></span>
-                                    {{ end }}
-                                </div>
-                            </article>
-                            {{ else }}
-                            <p class="small">No posts yet.</p>
-                            {{ end }}
-                        </div>
-                    </div>
-
-                    <div id="post-detail-view" class="post-detail-view is-hidden" aria-live="polite"></div>
-                </section>
+                    <form
+                      method="POST"
+                      action="/dislike"
+                      style="display: inline"
+                    >
+                      <input type="hidden" name="post_id" value="{{ .ID }}" />
+                      <button
+                        type="submit"
+                        class="dislike-btn{{ if index $.Disliked .ID }} active{{ end }}"
+                      >
+                        <img src="/statics/image/dislike.png" alt="Dislike" />
+                        <span class="count">{{ .Dislikes }}</span>
+                      </button>
+                    </form>
+                    {{ else }}
+                    <span class="disabled-like"
+                      ><img src="/statics/image/like.png" alt="Like" />
+                      <span class="count">{{ .Likes }}</span></span
+                    >
+                    <span class="disabled-dislike"
+                      ><img src="/statics/image/dislike.png" alt="Dislike" />
+                      <span class="count">{{ .Dislikes }}</span></span
+                    >
+                    {{ end }}
+                  </div>
+                </article>
+                {{ else }}
+                <p class="small">No posts yet.</p>
+                {{ end }}
+              </div>
             </div>
-        </main>
-    </div>
 
+            <div
+              id="post-detail-view"
+              class="post-detail-view is-hidden"
+              aria-live="polite"
+            ></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

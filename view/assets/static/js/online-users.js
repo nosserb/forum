@@ -453,12 +453,28 @@ document.addEventListener("DOMContentLoaded", () => {
     const id = Number(infoParts[0]);
     if (!Number.isFinite(id)) return;
 
-    usersInfo.set(id, {
+    const userInfo = {
       username: infoParts[1] || `User ${id}`,
       firstName: infoParts[2] || "",
       lastName: infoParts[3] || "",
       email: infoParts[4] || "",
-    });
+      age: infoParts[5] || "",
+      gender: infoParts[6] || "",
+    };
+
+    usersInfo.set(id, userInfo);
+
+    if (id === currentUserID) {
+      window.currentUserInfo = userInfo;
+      document.dispatchEvent(
+        new CustomEvent("forum:userinfo", {
+          detail: {
+            userID: id,
+            ...userInfo,
+          },
+        }),
+      );
+    }
 
     renderUsersList();
   }
