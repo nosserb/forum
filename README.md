@@ -33,35 +33,13 @@ docker run -it -p 8080:8080 forumdocker
 
 <br>
 
-> [!WARNING] WARNING
+> [!WARNING]
  The Dockerfile is currently not functional. We are working to make it usable again.
 
-<!-----
+<br>
 
-## Project Structure
-
-```text
-forum/
-├── controller/
-│   ├── cookies/
-│   ├── handlers/
-│   ├── logging/
-│   └── server/
-├── model/
-│   ├── data/
-│   └── functions/
-├── view/
-│   └── assets/
-│       ├── static/
-│       ├── statics/
-│       └── templates/
-├── dockerfile
-├── go.mod
-├── go.sum
-├── main.go
-└── README.md
-``` -->
 ---
+
 ## Main Features
 - User authentication and management
 - Post creation, editing, and deletion
@@ -71,20 +49,48 @@ forum/
 
 <br>
 
-> [!INFO] Development Notes
+> [!NOTE]
 > Commits are grouped by major addition or specific modification, as the full history could not be imported (study project).
 <br>
 
 ---
 
-> [!INFO] CREDITS
+## CREDIT
 This repo is the open-source version of a common curriculum project from **Zone01** called `forum`, reinforced by a more advanced `real time forum` project.
-<br>
-**Project carried out in collaboration with:**
-:octocat: [LeRacoune](https://github.com/LeRacoune)
-:octocat: [rmaillard](https://github.com/rmaillard2101)
-<br>
-**Docs by**
-:octocat: [nosserb](https://github.com/nosserb)
 
-<br>
+**Project carried out in collaboration with:**
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/LeRacoune">
+        <img src="https://github.com/LeRacoune.png" width="100px;" alt="LeRacoune"/><br />
+        <sub><b>LeRacoune</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/rmaillard">
+        <img src="https://github.com/rmaillard.png" width="100px;" alt="rmaillard"/><br />
+        <sub><b>rmaillard</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/IronBeagle404">
+        <img src="https://github.com/IronBeagle404.png" width="100px;" alt="rmaillard"/><br />
+        <sub><b>IronBeagle404</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
+
+**Docs by**
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/nosserb">
+        <img src="https://github.com/nosserb.png" width="100px;" alt="Nom"/><br />
+        <sub><b>nosserb</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
