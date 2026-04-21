@@ -1,42 +1,89 @@
-### Forum
 
-Ce projet contient le code du backend, sa base de données SQLite et ses templates HTML. 
+![img](https://i.ibb.co/chxV93fN/fa7b7532dde3.png)
 
-Le Dockerfile permet de construire et de lancer le conteneur facilement
-<br>
-Prérequis : Docker installé et Linux (Ubuntu 24.04 recommandé).
+> Open-source project Zone01 — Go backend, SQLite database, HTML templates
 
-<br>
+---
 
-> [!WARNING]    
-Le dockerfile est actuellement dysfonctionnel. Nous travaillons à le rendre utilisable à nouveau.
+## Overview
 
-<br>
+<b>
+This project is a web forum developed in Go, using a SQLite database and HTML templates. It follows an MVC (Model-View-Controller) architecture and is easily managed via Docker.
+</b>
 
-Pour construire l’image Docker depuis le dossier docker :
+---
 
-`docker build -t forumdocker .` 
-<br>
-( forumdocker est le nom de l’image )
+## Requirements
+- Docker installed
+- Linux (Ubuntu 24.04 recommended)
+---
+## Installation & Startup
 
-<br>
+### 1. Build the Docker image
+```bash
+docker build -t forumdocker .
+```
+> forumdocker is the image name
 
-Pour lancer le conteneur :
-
-`docker run -it -p 8080:8080 forumdocker`
-<br>
-( -it active le mode interactif pour voir les logs )
-
-<br>
-
-
-> [!IMPORTANT]  
-Les commits peuvent sembler lourds et peu optimisés, et c'est le cas. Étant donné que c'est un projet d'étude nous ne pouvons pas importer l'historiques de commits complet, ils sont donc regroupés par ajout majeur ou modification spécifiques à ce repo.
+### 2. Run the container
+```bash
+docker run -it -p 8080:8080 forumdocker
+```
+> -it enables interactive mode to view logs
 
 <br>
 
-### Crédit
+> [!WARNING] WARNING
+ The Dockerfile is currently not functional. We are working to make it usable again.
 
-Ce repo est la version open-source d'un projet du cursus commun de Zone01 nommé `forum`, renforcé par un projet `real time forum` plus avancé. 
+<!-----
 
-Le travail sur ce projet a été réalisé en collaboration avec [LeRacoune](https://github.com/LeRacoune) et [rmaillard](https://github.com/rmaillard2101)
+## Project Structure
+
+```text
+forum/
+├── controller/
+│   ├── cookies/
+│   ├── handlers/
+│   ├── logging/
+│   └── server/
+├── model/
+│   ├── data/
+│   └── functions/
+├── view/
+│   └── assets/
+│       ├── static/
+│       ├── statics/
+│       └── templates/
+├── dockerfile
+├── go.mod
+├── go.sum
+├── main.go
+└── README.md
+``` -->
+---
+## Main Features
+- User authentication and management
+- Post creation, editing, and deletion
+- Like and comment system
+- Error and access management
+- Responsive interface (HTML/CSS/JS)
+
+<br>
+
+> [!INFO] Development Notes
+> Commits are grouped by major addition or specific modification, as the full history could not be imported (study project).
+<br>
+
+---
+> [!INFO] CREDITS
+This repo is the open-source version of a common curriculum project from **Zone01** called `forum`, reinforced by a more advanced `real time forum` project.
+<br>
+**Project carried out in collaboration with:**
+:octocat: [LeRacoune](https://github.com/LeRacoune)
+:octocat: [rmaillard](https://github.com/rmaillard2101)
+<br>
+**Docs by**
+:octocat: [nosserb](https://github.com/nosserb)
+
+<br>
